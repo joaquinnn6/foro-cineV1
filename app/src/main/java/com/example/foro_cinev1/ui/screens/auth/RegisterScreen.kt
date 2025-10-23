@@ -23,28 +23,28 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
-    onNavigateBack: () -> Unit,
-    onRegisterSuccess: () -> Unit
+    alVolverAtras: () -> Unit,
+    alRegistrarseExitoso: () -> Unit
 ) {
     var nombre by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
+    var correo by remember { mutableStateOf("") }
+    var contraseña by remember { mutableStateOf("") }
+    var confirmarContraseña by remember { mutableStateOf("") }
     var ubicacion by remember { mutableStateOf("") }
 
-    var passwordVisible by remember { mutableStateOf(false) }
-    var confirmPasswordVisible by remember { mutableStateOf(false) }
+    var contraseñaVisible by remember { mutableStateOf(false) }
+    var confirmarContraseñaVisible by remember { mutableStateOf(false) }
 
-    var nombreError by remember { mutableStateOf<String?>(null) }
-    var emailError by remember { mutableStateOf<String?>(null) }
-    var passwordError by remember { mutableStateOf<String?>(null) }
-    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
-    var isLoading by remember { mutableStateOf(false) }
+    var errorNombre by remember { mutableStateOf<String?>(null) }
+    var errorCorreo by remember { mutableStateOf<String?>(null) }
+    var errorContraseña by remember { mutableStateOf<String?>(null) }
+    var errorConfirmarContraseña by remember { mutableStateOf<String?>(null) }
+    var estaCargando by remember { mutableStateOf(false) }
 
-    val focusManager = LocalFocusManager.current
-    val scrollState = rememberScrollState()
+    val administradorFoco = LocalFocusManager.current
+    val estadoScroll = rememberScrollState()
 
-    fun validateNombre(nombre: String): String? {
+    fun validarNombre(nombre: String): String? {
         return when {
             nombre.isBlank() -> "El nombre es requerido"
             nombre.length < 3 -> "El nombre debe tener al menos 3 caracteres"
@@ -52,43 +52,43 @@ fun RegisterScreen(
         }
     }
 
-    fun validateEmail(email: String): String? {
+    fun validarCorreo(correo: String): String? {
         return when {
-            email.isBlank() -> "El correo es requerido"
-            !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() ->
+            correo.isBlank() -> "El correo es requerido"
+            !android.util.Patterns.EMAIL_ADDRESS.matcher(correo).matches() ->
                 "Formato de correo inválido"
             else -> null
         }
     }
 
-    fun validatePassword(password: String): String? {
+    fun validarContraseña(contraseña: String): String? {
         return when {
-            password.isBlank() -> "La contraseña es requerida"
-            password.length < 6 -> "La contraseña debe tener al menos 6 caracteres"
-            !password.any { it.isDigit() } -> "Debe contener al menos un número"
+            contraseña.isBlank() -> "La contraseña es requerida"
+            contraseña.length < 6 -> "La contraseña debe tener al menos 6 caracteres"
+            !contraseña.any { it.isDigit() } -> "Debe contener al menos un número"
             else -> null
         }
     }
 
-    fun validateConfirmPassword(password: String, confirmPassword: String): String? {
+    fun validarConfirmarContraseña(contraseña: String, confirmar: String): String? {
         return when {
-            confirmPassword.isBlank() -> "Confirma tu contraseña"
-            password != confirmPassword -> "Las contraseñas no coinciden"
+            confirmar.isBlank() -> "Confirma tu contraseña"
+            contraseña != confirmar -> "Las contraseñas no coinciden"
             else -> null
         }
     }
 
-    fun handleRegister() {
-        nombreError = validateNombre(nombre)
-        emailError = validateEmail(email)
-        passwordError = validatePassword(password)
-        confirmPasswordError = validateConfirmPassword(password, confirmPassword)
+    fun manejarRegistro() {
+        errorNombre = validarNombre(nombre)
+        errorCorreo = validarCorreo(correo)
+        errorContraseña = validarContraseña(contraseña)
+        errorConfirmarContraseña = validarConfirmarContraseña(contraseña, confirmarContraseña)
 
-        if (nombreError == null && emailError == null &&
-            passwordError == null && confirmPasswordError == null) {
-            isLoading = true
+        if (errorNombre == null && errorCorreo == null &&
+            errorContraseña == null && errorConfirmarContraseña == null) {
+            estaCargando = true
             // Aquí tu compañero conectará con el backend
-            onRegisterSuccess()
+            alRegistrarseExitoso()
         }
     }
 
@@ -97,7 +97,7 @@ fun RegisterScreen(
             TopAppBar(
                 title = { Text("Crear Cuenta") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = alVolverAtras) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
                     }
                 },
@@ -111,7 +111,7 @@ fun RegisterScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(scrollState)
+                .verticalScroll(estadoScroll)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -137,16 +137,16 @@ fun RegisterScreen(
                 value = nombre,
                 onValueChange = {
                     nombre = it
-                    nombreError = null
+                    errorNombre = null
                 },
                 label = { Text("Nombre completo") },
                 leadingIcon = {
                     Icon(Icons.Default.Person, contentDescription = null)
                 },
-                isError = nombreError != null,
+                isError = errorNombre != null,
                 supportingText = {
-                    AnimatedVisibility(visible = nombreError != null) {
-                        Text(nombreError ?: "")
+                    AnimatedVisibility(visible = errorNombre != null) {
+                        Text(errorNombre ?: "")
                     }
                 },
                 keyboardOptions = KeyboardOptions(
@@ -154,7 +154,7 @@ fun RegisterScreen(
                     imeAction = ImeAction.Next
                 ),
                 keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                    onNext = { administradorFoco.moveFocus(FocusDirection.Down) }
                 ),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -162,21 +162,21 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de email
+            // Campo de correo
             OutlinedTextField(
-                value = email,
+                value = correo,
                 onValueChange = {
-                    email = it
-                    emailError = null
+                    correo = it
+                    errorCorreo = null
                 },
                 label = { Text("Correo electrónico") },
                 leadingIcon = {
                     Icon(Icons.Default.Email, contentDescription = null)
                 },
-                isError = emailError != null,
+                isError = errorCorreo != null,
                 supportingText = {
-                    AnimatedVisibility(visible = emailError != null) {
-                        Text(emailError ?: "")
+                    AnimatedVisibility(visible = errorCorreo != null) {
+                        Text(errorCorreo ?: "")
                     }
                 },
                 keyboardOptions = KeyboardOptions(
@@ -184,7 +184,7 @@ fun RegisterScreen(
                     imeAction = ImeAction.Next
                 ),
                 keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                    onNext = { administradorFoco.moveFocus(FocusDirection.Down) }
                 ),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -192,7 +192,7 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de ubicación (opcional)
+            // Campo de ubicación
             OutlinedTextField(
                 value = ubicacion,
                 onValueChange = { ubicacion = it },
@@ -205,7 +205,7 @@ fun RegisterScreen(
                     imeAction = ImeAction.Next
                 ),
                 keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                    onNext = { administradorFoco.moveFocus(FocusDirection.Down) }
                 ),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -215,30 +215,30 @@ fun RegisterScreen(
 
             // Campo de contraseña
             OutlinedTextField(
-                value = password,
+                value = contraseña,
                 onValueChange = {
-                    password = it
-                    passwordError = null
+                    contraseña = it
+                    errorContraseña = null
                 },
                 label = { Text("Contraseña") },
                 leadingIcon = {
                     Icon(Icons.Default.Lock, contentDescription = null)
                 },
                 trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    IconButton(onClick = { contraseñaVisible = !contraseñaVisible }) {
                         Icon(
-                            imageVector = if (passwordVisible) Icons.Default.Visibility
+                            imageVector = if (contraseñaVisible) Icons.Default.Visibility
                             else Icons.Default.VisibilityOff,
-                            contentDescription = if (passwordVisible) "Ocultar" else "Mostrar"
+                            contentDescription = if (contraseñaVisible) "Ocultar" else "Mostrar"
                         )
                     }
                 },
-                visualTransformation = if (passwordVisible) VisualTransformation.None
+                visualTransformation = if (contraseñaVisible) VisualTransformation.None
                 else PasswordVisualTransformation(),
-                isError = passwordError != null,
+                isError = errorContraseña != null,
                 supportingText = {
-                    AnimatedVisibility(visible = passwordError != null) {
-                        Text(passwordError ?: "")
+                    AnimatedVisibility(visible = errorContraseña != null) {
+                        Text(errorContraseña ?: "")
                     }
                 },
                 keyboardOptions = KeyboardOptions(
@@ -246,7 +246,7 @@ fun RegisterScreen(
                     imeAction = ImeAction.Next
                 ),
                 keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                    onNext = { administradorFoco.moveFocus(FocusDirection.Down) }
                 ),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -256,30 +256,30 @@ fun RegisterScreen(
 
             // Confirmar contraseña
             OutlinedTextField(
-                value = confirmPassword,
+                value = confirmarContraseña,
                 onValueChange = {
-                    confirmPassword = it
-                    confirmPasswordError = null
+                    confirmarContraseña = it
+                    errorConfirmarContraseña = null
                 },
                 label = { Text("Confirmar contraseña") },
                 leadingIcon = {
                     Icon(Icons.Default.Lock, contentDescription = null)
                 },
                 trailingIcon = {
-                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                    IconButton(onClick = { confirmarContraseñaVisible = !confirmarContraseñaVisible }) {
                         Icon(
-                            imageVector = if (confirmPasswordVisible) Icons.Default.Visibility
+                            imageVector = if (confirmarContraseñaVisible) Icons.Default.Visibility
                             else Icons.Default.VisibilityOff,
-                            contentDescription = if (confirmPasswordVisible) "Ocultar" else "Mostrar"
+                            contentDescription = if (confirmarContraseñaVisible) "Ocultar" else "Mostrar"
                         )
                     }
                 },
-                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None
+                visualTransformation = if (confirmarContraseñaVisible) VisualTransformation.None
                 else PasswordVisualTransformation(),
-                isError = confirmPasswordError != null,
+                isError = errorConfirmarContraseña != null,
                 supportingText = {
-                    AnimatedVisibility(visible = confirmPasswordError != null) {
-                        Text(confirmPasswordError ?: "")
+                    AnimatedVisibility(visible = errorConfirmarContraseña != null) {
+                        Text(errorConfirmarContraseña ?: "")
                     }
                 },
                 keyboardOptions = KeyboardOptions(
@@ -288,8 +288,8 @@ fun RegisterScreen(
                 ),
                 keyboardActions = KeyboardActions(
                     onDone = {
-                        focusManager.clearFocus()
-                        handleRegister()
+                        administradorFoco.clearFocus()
+                        manejarRegistro()
                     }
                 ),
                 singleLine = true,
@@ -300,13 +300,13 @@ fun RegisterScreen(
 
             // Botón de registro
             Button(
-                onClick = { handleRegister() },
+                onClick = { manejarRegistro() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
-                enabled = !isLoading
+                enabled = !estaCargando
             ) {
-                if (isLoading) {
+                if (estaCargando) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary
@@ -318,7 +318,7 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            TextButton(onClick = onNavigateBack) {
+            TextButton(onClick = alVolverAtras) {
                 Text("¿Ya tienes cuenta? Inicia sesión")
             }
         }

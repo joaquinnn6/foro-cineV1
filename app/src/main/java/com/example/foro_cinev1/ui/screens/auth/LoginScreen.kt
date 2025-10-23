@@ -20,44 +20,43 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun LoginScreen(
-    onNavigateToRegister: () -> Unit,
-    onLoginSuccess: () -> Unit
+    alIrARegistro: () -> Unit,
+    alLoguearseExitoso: () -> Unit
 ) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    var emailError by remember { mutableStateOf<String?>(null) }
-    var passwordError by remember { mutableStateOf<String?>(null) }
-    var isLoading by remember { mutableStateOf(false) }
+    var correo by remember { mutableStateOf("") }
+    var contraseña by remember { mutableStateOf("") }
+    var contraseñaVisible by remember { mutableStateOf(false) }
+    var errorCorreo by remember { mutableStateOf<String?>(null) }
+    var errorContraseña by remember { mutableStateOf<String?>(null) }
+    var estaCargando by remember { mutableStateOf(false) }
 
-    val focusManager = LocalFocusManager.current
+    val administradorFoco = LocalFocusManager.current
 
-    fun validateEmail(email: String): String? {
+    fun validarCorreo(correo: String): String? {
         return when {
-            email.isBlank() -> "El correo es requerido"
-            !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() ->
+            correo.isBlank() -> "El correo es requerido"
+            !android.util.Patterns.EMAIL_ADDRESS.matcher(correo).matches() ->
                 "Formato de correo inválido"
             else -> null
         }
     }
 
-    fun validatePassword(password: String): String? {
+    fun validarContraseña(contraseña: String): String? {
         return when {
-            password.isBlank() -> "La contraseña es requerida"
-            password.length < 6 -> "La contraseña debe tener al menos 6 caracteres"
+            contraseña.isBlank() -> "La contraseña es requerida"
+            contraseña.length < 6 -> "La contraseña debe tener al menos 6 caracteres"
             else -> null
         }
     }
 
-    fun handleLogin() {
-        emailError = validateEmail(email)
-        passwordError = validatePassword(password)
+    fun manejarLogin() {
+        errorCorreo = validarCorreo(correo)
+        errorContraseña = validarContraseña(contraseña)
 
-        if (emailError == null && passwordError == null) {
-            isLoading = true
+        if (errorCorreo == null && errorContraseña == null) {
+            estaCargando = true
             // Aquí tu compañero conectará con el backend
-            // Por ahora simulamos login exitoso
-            onLoginSuccess()
+            alLoguearseExitoso()
         }
     }
 
@@ -96,21 +95,21 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Campo de email
+            // Campo de correo
             OutlinedTextField(
-                value = email,
+                value = correo,
                 onValueChange = {
-                    email = it
-                    emailError = null
+                    correo = it
+                    errorCorreo = null
                 },
                 label = { Text("Correo electrónico") },
                 leadingIcon = {
                     Icon(Icons.Default.Email, contentDescription = null)
                 },
-                isError = emailError != null,
+                isError = errorCorreo != null,
                 supportingText = {
-                    AnimatedVisibility(visible = emailError != null) {
-                        Text(emailError ?: "")
+                    AnimatedVisibility(visible = errorCorreo != null) {
+                        Text(errorCorreo ?: "")
                     }
                 },
                 keyboardOptions = KeyboardOptions(
@@ -118,7 +117,7 @@ fun LoginScreen(
                     imeAction = ImeAction.Next
                 ),
                 keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                    onNext = { administradorFoco.moveFocus(FocusDirection.Down) }
                 ),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -128,31 +127,31 @@ fun LoginScreen(
 
             // Campo de contraseña
             OutlinedTextField(
-                value = password,
+                value = contraseña,
                 onValueChange = {
-                    password = it
-                    passwordError = null
+                    contraseña = it
+                    errorContraseña = null
                 },
                 label = { Text("Contraseña") },
                 leadingIcon = {
                     Icon(Icons.Default.Lock, contentDescription = null)
                 },
                 trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    IconButton(onClick = { contraseñaVisible = !contraseñaVisible }) {
                         Icon(
-                            imageVector = if (passwordVisible) Icons.Default.Visibility
+                            imageVector = if (contraseñaVisible) Icons.Default.Visibility
                             else Icons.Default.VisibilityOff,
-                            contentDescription = if (passwordVisible) "Ocultar contraseña"
+                            contentDescription = if (contraseñaVisible) "Ocultar contraseña"
                             else "Mostrar contraseña"
                         )
                     }
                 },
-                visualTransformation = if (passwordVisible) VisualTransformation.None
+                visualTransformation = if (contraseñaVisible) VisualTransformation.None
                 else PasswordVisualTransformation(),
-                isError = passwordError != null,
+                isError = errorContraseña != null,
                 supportingText = {
-                    AnimatedVisibility(visible = passwordError != null) {
-                        Text(passwordError ?: "")
+                    AnimatedVisibility(visible = errorContraseña != null) {
+                        Text(errorContraseña ?: "")
                     }
                 },
                 keyboardOptions = KeyboardOptions(
@@ -161,8 +160,8 @@ fun LoginScreen(
                 ),
                 keyboardActions = KeyboardActions(
                     onDone = {
-                        focusManager.clearFocus()
-                        handleLogin()
+                        administradorFoco.clearFocus()
+                        manejarLogin()
                     }
                 ),
                 singleLine = true,
@@ -173,13 +172,13 @@ fun LoginScreen(
 
             // Botón de login
             Button(
-                onClick = { handleLogin() },
+                onClick = { manejarLogin() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
-                enabled = !isLoading
+                enabled = !estaCargando
             ) {
-                if (isLoading) {
+                if (estaCargando) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary
@@ -192,7 +191,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Botón de registro
-            TextButton(onClick = onNavigateToRegister) {
+            TextButton(onClick = alIrARegistro) {
                 Text("¿No tienes cuenta? Regístrate")
             }
         }

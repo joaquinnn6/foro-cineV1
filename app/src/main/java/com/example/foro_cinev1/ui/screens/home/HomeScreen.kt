@@ -16,11 +16,11 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToNews: () -> Unit,
-    onNavigateToForum: () -> Unit,
-    onNavigateToProfile: () -> Unit
+    alIrANoticias: () -> Unit,
+    alIrAForo: () -> Unit,
+    alIrAPerfil: () -> Unit
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
+    var tabSeleccionada by remember { mutableStateOf(0) }
 
     Scaffold(
         topBar = {
@@ -32,7 +32,7 @@ fun HomeScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = onNavigateToProfile) {
+                    IconButton(onClick = alIrAPerfil) {
                         Icon(Icons.Default.Person, contentDescription = "Perfil")
                     }
                 },
@@ -46,25 +46,25 @@ fun HomeScreen(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
+                    selected = tabSeleccionada == 0,
+                    onClick = { tabSeleccionada = 0 },
                     icon = { Icon(Icons.Default.Home, contentDescription = null) },
                     label = { Text("Inicio") }
                 )
                 NavigationBarItem(
-                    selected = selectedTab == 1,
+                    selected = tabSeleccionada == 1,
                     onClick = {
-                        selectedTab = 1
-                        onNavigateToNews()
+                        tabSeleccionada = 1
+                        alIrANoticias()
                     },
                     icon = { Icon(Icons.Default.Article, contentDescription = null) },
                     label = { Text("Noticias") }
                 )
                 NavigationBarItem(
-                    selected = selectedTab == 2,
+                    selected = tabSeleccionada == 2,
                     onClick = {
-                        selectedTab = 2
-                        onNavigateToForum()
+                        tabSeleccionada = 2
+                        alIrAForo()
                     },
                     icon = { Icon(Icons.Default.Forum, contentDescription = null) },
                     label = { Text("Foro") }
@@ -118,10 +118,10 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    items(5) { index ->
-                        NewsCard(
-                            title = "Noticia ${index + 1}",
-                            onClick = onNavigateToNews
+                    items(5) { indice ->
+                        TarjetaNoticia(
+                            titulo = "Noticia ${indice + 1}",
+                            alHacerClick = alIrANoticias
                         )
                     }
                 }
@@ -136,11 +136,11 @@ fun HomeScreen(
                 )
             }
 
-            items(3) { index ->
-                ForumPostCard(
-                    title = "Publicación ${index + 1}",
-                    author = "Usuario ${index + 1}",
-                    onClick = onNavigateToForum
+            items(3) { indice ->
+                TarjetaPublicacionForo(
+                    titulo = "Publicación ${indice + 1}",
+                    autor = "Usuario ${indice + 1}",
+                    alHacerClick = alIrAForo
                 )
             }
 
@@ -158,12 +158,12 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    CategoryChip(
-                        text = "🎬 Estrenos",
+                    ChipCategoria(
+                        texto = "🎬 Estrenos",
                         modifier = Modifier.weight(1f)
                     )
-                    CategoryChip(
-                        text = "⭐ Reseñas",
+                    ChipCategoria(
+                        texto = "⭐ Reseñas",
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -174,12 +174,12 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    CategoryChip(
-                        text = "🎭 Teorías",
+                    ChipCategoria(
+                        texto = "🎭 Teorías",
                         modifier = Modifier.weight(1f)
                     )
-                    CategoryChip(
-                        text = "🍿 Recomendaciones",
+                    ChipCategoria(
+                        texto = "🍿 Recomendaciones",
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -189,12 +189,12 @@ fun HomeScreen(
 }
 
 @Composable
-fun NewsCard(
-    title: String,
-    onClick: () -> Unit
+fun TarjetaNoticia(
+    titulo: String,
+    alHacerClick: () -> Unit
 ) {
     Card(
-        onClick = onClick,
+        onClick = alHacerClick,
         modifier = Modifier
             .width(200.dp)
             .height(120.dp),
@@ -217,7 +217,7 @@ fun NewsCard(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = title,
+                    text = titulo,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
@@ -227,13 +227,13 @@ fun NewsCard(
 }
 
 @Composable
-fun ForumPostCard(
-    title: String,
-    author: String,
-    onClick: () -> Unit
+fun TarjetaPublicacionForo(
+    titulo: String,
+    autor: String,
+    alHacerClick: () -> Unit
 ) {
     Card(
-        onClick = onClick,
+        onClick = alHacerClick,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -254,12 +254,12 @@ fun ForumPostCard(
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = title,
+                    text = titulo,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Por $author",
+                    text = "Por $autor",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
@@ -274,8 +274,8 @@ fun ForumPostCard(
 }
 
 @Composable
-fun CategoryChip(
-    text: String,
+fun ChipCategoria(
+    texto: String,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -289,7 +289,7 @@ fun CategoryChip(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = text,
+                text = texto,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )

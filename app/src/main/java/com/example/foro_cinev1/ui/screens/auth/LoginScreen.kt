@@ -44,7 +44,10 @@ fun LoginScreen(
     fun validarContraseña(contraseña: String): String? {
         return when {
             contraseña.isBlank() -> "La contraseña es requerida"
-            contraseña.length < 6 -> "La contraseña debe tener al menos 6 caracteres"
+            contraseña.length < 8 -> "La contraseña debe tener al menos 8 caracteres"
+            !contraseña.any { it.isDigit() } -> "Debe contener al menos un número"
+            !contraseña.any { it.isLowerCase() } -> "Debe contener al menos una minúscula"
+            !contraseña.any { it.isUpperCase() } -> "Debe contener al menos una mayúscula"
             else -> null
         }
     }

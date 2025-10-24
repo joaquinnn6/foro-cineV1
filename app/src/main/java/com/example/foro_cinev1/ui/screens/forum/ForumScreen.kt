@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,8 +14,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.foro_cinev1.domain.models.Post
+import com.example.foro_cinev1.ui.theme.ForocineV1Theme
 import com.example.foro_cinev1.viewmodel.PostViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,7 +41,7 @@ fun ForumScreen(
                 title = { Text("Foro de Cine", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = alVolverAtras) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -96,7 +100,6 @@ fun ForumScreen(
                 items(publicaciones) { publicacion ->
                     TarjetaPublicacion(
                         publicacion = publicacion,
-                        contexto = contexto,
                         viewModel = viewModel
                     )
                 }
@@ -108,7 +111,6 @@ fun ForumScreen(
 @Composable
 fun TarjetaPublicacion(
     publicacion: Post,
-    contexto: Context,
     viewModel: PostViewModel
 ) {
     var mostrarDialogoEliminar by remember { mutableStateOf(false) }
@@ -199,7 +201,7 @@ fun TarjetaPublicacion(
 
                 TextButton(onClick = { /* Comentar */ }) {
                     Icon(
-                        Icons.Default.Comment,
+                        Icons.AutoMirrored.Filled.Comment,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
@@ -238,3 +240,4 @@ fun TarjetaPublicacion(
         )
     }
 }
+

@@ -1,4 +1,4 @@
-package com.example.foro_cinev1.ui.navegation
+package com.example.foro_cinev1.ui.navigation
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
@@ -53,8 +53,8 @@ fun AppNavGraph(
     ) {
         composable(Screen.Login.route) {
             LoginScreen(
-                onNavigateToRegister = { navController.navigate(Screen.Register.route) },
-                onLoginSuccess = {
+                alIrARegistro = { navController.navigate(Screen.Register.route) },
+                alLoguearseExitoso = {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
@@ -64,8 +64,8 @@ fun AppNavGraph(
 
         composable(Screen.Register.route) {
             RegisterScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onRegisterSuccess = {
+                alVolverAtras = { navController.popBackStack() },
+                alRegistrarseExitoso = {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
@@ -75,16 +75,16 @@ fun AppNavGraph(
 
         composable(Screen.Home.route) {
             HomeScreen(
-                onNavigateToNews = { navController.navigate(Screen.NewsList.route) },
-                onNavigateToForum = { navController.navigate(Screen.Forum.route) },
-                onNavigateToProfile = { navController.navigate(Screen.Profile.route) }
+                alIrANoticias = { navController.navigate(Screen.NewsList.route) },
+                alIrAForo = { navController.navigate(Screen.Forum.route) },
+                alIrAPerfil = { navController.navigate(Screen.Profile.route) }
             )
         }
 
         composable(Screen.NewsList.route) {
             NewsListScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToDetail = { newsId ->
+                alVolverAtras = { navController.popBackStack() },
+                alIrADetalle = { newsId ->
                     navController.navigate(Screen.NewsDetail.createRoute(newsId))
                 }
             )
@@ -97,26 +97,26 @@ fun AppNavGraph(
             val newsId = backStackEntry.arguments?.getInt("newsId") ?: 0
             NewsDetailScreen(
                 newsId = newsId,
-                onNavigateBack = { navController.popBackStack() }
+                alVolverAtras = { navController.popBackStack() }
             )
         }
 
         composable(Screen.Forum.route) {
             ForumScreen(
-                onNavigateToCreatePost = { navController.navigate(Screen.CreatePost.route) },
-                onNavigateBack = { navController.popBackStack() }
+                alIrACrearPublicacion = { navController.navigate(Screen.CreatePost.route) },
+                alVolverAtras = { navController.popBackStack() }
             )
         }
 
         composable(Screen.CreatePost.route) {
             CreatePostScreen(
-                onNavigateBack = { navController.popBackStack() }
+                alVolverAtras = { navController.popBackStack() }
             )
         }
 
         composable(Screen.Profile.route) {
             ProfileScreen(
-                onNavigateBack = { navController.popBackStack() }
+                alVolverAtras = { navController.popBackStack() }
             )
         }
     }

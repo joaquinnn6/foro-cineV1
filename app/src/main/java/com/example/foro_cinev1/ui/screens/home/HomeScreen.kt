@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,12 +26,7 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        "CineVerse 🎬",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+                title = { Text("CineVerse 🎬", fontWeight = FontWeight.Bold) },
                 actions = {
                     IconButton(onClick = alIrAPerfil) {
                         Icon(Icons.Default.Person, contentDescription = "Perfil")
@@ -48,7 +44,7 @@ fun HomeScreen(
                 NavigationBarItem(
                     selected = tabSeleccionada == 0,
                     onClick = { tabSeleccionada = 0 },
-                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                    icon = { Icon(Icons.Default.Home, contentDescription = "Inicio") },
                     label = { Text("Inicio") }
                 )
                 NavigationBarItem(
@@ -57,7 +53,7 @@ fun HomeScreen(
                         tabSeleccionada = 1
                         alIrANoticias()
                     },
-                    icon = { Icon(Icons.Default.Article, contentDescription = null) },
+                    icon = { Icon(Icons.Default.Article, contentDescription = "Noticias") },
                     label = { Text("Noticias") }
                 )
                 NavigationBarItem(
@@ -66,7 +62,7 @@ fun HomeScreen(
                         tabSeleccionada = 2
                         alIrAForo()
                     },
-                    icon = { Icon(Icons.Default.Forum, contentDescription = null) },
+                    icon = { Icon(Icons.Default.Forum, contentDescription = "Foro") },
                     label = { Text("Foro") }
                 )
             }
@@ -75,36 +71,39 @@ fun HomeScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(16.dp),
+                .padding(padding)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Sección de bienvenida
+            // 🏠 Sección de bienvenida
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
+                    ),
+                    elevation = CardDefaults.cardElevation(4.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier
+                            .padding(20.dp)
+                            .fillMaxWidth()
                     ) {
                         Text(
-                            text = "¡Bienvenido!",
+                            text = "¡Bienvenido a CineVerse!",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Descubre las últimas noticias del cine y comparte tus opiniones",
+                            text = "Explora noticias, comparte opiniones y disfruta del mundo del cine.",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
             }
 
-            // Noticias destacadas
+            // 📰 Noticias destacadas
             item {
                 Text(
                     text = "Noticias Destacadas 📰",
@@ -121,13 +120,14 @@ fun HomeScreen(
                     items(5) { indice ->
                         TarjetaNoticia(
                             titulo = "Noticia ${indice + 1}",
+                            resumen = "Descripción breve o titular de ejemplo...",
                             alHacerClick = alIrANoticias
                         )
                     }
                 }
             }
 
-            // Publicaciones recientes del foro
+            // 💬 Publicaciones recientes
             item {
                 Text(
                     text = "Publicaciones Recientes 💬",
@@ -144,10 +144,10 @@ fun HomeScreen(
                 )
             }
 
-            // Categorías populares
+            // 🎭 Categorías populares
             item {
                 Text(
-                    text = "Categorías 🎭",
+                    text = "Categorías Populares 🎭",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -158,14 +158,8 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    ChipCategoria(
-                        texto = "🎬 Estrenos",
-                        modifier = Modifier.weight(1f)
-                    )
-                    ChipCategoria(
-                        texto = "⭐ Reseñas",
-                        modifier = Modifier.weight(1f)
-                    )
+                    ChipCategoria("🎬 Estrenos", Modifier.weight(1f))
+                    ChipCategoria("⭐ Reseñas", Modifier.weight(1f))
                 }
             }
 
@@ -174,14 +168,8 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    ChipCategoria(
-                        texto = "🎭 Teorías",
-                        modifier = Modifier.weight(1f)
-                    )
-                    ChipCategoria(
-                        texto = "🍿 Recomendaciones",
-                        modifier = Modifier.weight(1f)
-                    )
+                    ChipCategoria("🎭 Teorías", Modifier.weight(1f))
+                    ChipCategoria("🍿 Recomendaciones", Modifier.weight(1f))
                 }
             }
         }
@@ -191,37 +179,41 @@ fun HomeScreen(
 @Composable
 fun TarjetaNoticia(
     titulo: String,
+    resumen: String,
     alHacerClick: () -> Unit
 ) {
     Card(
         onClick = alHacerClick,
         modifier = Modifier
-            .width(200.dp)
-            .height(120.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+            .width(220.dp)
+            .height(140.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(3.dp)
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    Icons.Default.Article,
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = titulo,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-            }
+            Icon(
+                Icons.Default.Article,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = titulo,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = resumen,
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -235,9 +227,8 @@ fun TarjetaPublicacionForo(
     Card(
         onClick = alHacerClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(
             modifier = Modifier
@@ -249,45 +240,34 @@ fun TarjetaPublicacionForo(
                 Icons.Default.Forum,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(36.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = titulo,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Text(titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(
                     text = "Por $autor",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Icon(
                 Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 }
 
 @Composable
-fun ChipCategoria(
-    texto: String,
-    modifier: Modifier = Modifier
-) {
+fun ChipCategoria(texto: String, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.height(56.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
                 text = texto,
                 style = MaterialTheme.typography.bodyMedium,

@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.foro_cinev1.ui.screens.auth.LoginScreen
 import com.example.foro_cinev1.ui.screens.auth.RegisterScreen
+import com.example.foro_cinev1.ui.screens.auth.SplashScreen
 import com.example.foro_cinev1.ui.screens.home.HomeScreen
 import com.example.foro_cinev1.ui.screens.news.NewsListScreen
 import com.example.foro_cinev1.ui.screens.news.NewsDetailScreen
@@ -21,58 +22,72 @@ import com.example.foro_cinev1.ui.screens.profile.ProfileScreen
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
-    startDestination: String = Screen.Login.route
+    startDestination: String = Screen.Splash.route
 ) {
     NavHost(
         navController = navController,
         startDestination = startDestination,
         enterTransition = {
-            slideInHorizontally(
-                initialOffsetX = { 1000 },
-                animationSpec = tween(300)
-            ) + fadeIn(animationSpec = tween(300))
+            slideInHorizontally(initialOffsetX = { 1000 }, animationSpec = tween(300)) +
+                    fadeIn(animationSpec = tween(300))
         },
         exitTransition = {
-            slideOutHorizontally(
-                targetOffsetX = { -1000 },
-                animationSpec = tween(300)
-            ) + fadeOut(animationSpec = tween(300))
+            slideOutHorizontally(targetOffsetX = { -1000 }, animationSpec = tween(300)) +
+                    fadeOut(animationSpec = tween(300))
         },
         popEnterTransition = {
-            slideInHorizontally(
-                initialOffsetX = { -1000 },
-                animationSpec = tween(300)
-            ) + fadeIn(animationSpec = tween(300))
+            slideInHorizontally(initialOffsetX = { -1000 }, animationSpec = tween(300)) +
+                    fadeIn(animationSpec = tween(300))
         },
         popExitTransition = {
-            slideOutHorizontally(
-                targetOffsetX = { 1000 },
-                animationSpec = tween(300)
-            ) + fadeOut(animationSpec = tween(300))
+            slideOutHorizontally(targetOffsetX = { 1000 }, animationSpec = tween(300)) +
+                    fadeOut(animationSpec = tween(300))
         }
     ) {
-        composable(Screen.Login.route) {
-            LoginScreen(
-                alIrARegistro = { navController.navigate(Screen.Register.route) },
-                alLoguearseExitoso = {
+
+        // 🟣 SPLASH
+        composable(Screen.Splash.route) {
+            SplashScreen(
+                onSesionActiva = {
                     navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                },
+                onIrLogin = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 }
             )
         }
 
+        // 🟢 LOGIN
+        composable(Screen.Login.route) {
+            LoginScreen(
+                alLoguearseExitoso = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                },
+                alIrARegistro = {
+                    navController.navigate(Screen.Register.route)
+                }
+            )
+        }
+
+        // 🟡 REGISTRO
         composable(Screen.Register.route) {
             RegisterScreen(
                 alVolverAtras = { navController.popBackStack() },
                 alRegistrarseExitoso = {
                     navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
+                        popUpTo(Screen.Register.route) { inclusive = true }
                     }
                 }
             )
         }
 
+        // 🔵 HOME
         composable(Screen.Home.route) {
             HomeScreen(
                 alIrANoticias = { navController.navigate(Screen.NewsList.route) },
@@ -81,6 +96,7 @@ fun AppNavGraph(
             )
         }
 
+        // 📰 LISTA DE NOTICIAS
         composable(Screen.NewsList.route) {
             NewsListScreen(
                 alVolverAtras = { navController.popBackStack() },
@@ -90,6 +106,7 @@ fun AppNavGraph(
             )
         }
 
+        // 🗞️ DETALLE DE NOTICIA
         composable(
             route = Screen.NewsDetail.route,
             arguments = listOf(navArgument("newsId") { type = NavType.IntType })
@@ -101,22 +118,31 @@ fun AppNavGraph(
             )
         }
 
+        // 💬 FORO
         composable(Screen.Forum.route) {
             ForumScreen(
                 alIrACrearPublicacion = { navController.navigate(Screen.CreatePost.route) },
-                alVolverAtras = { navController.popBackStack() }
+                alVolverAtras = { navController.popBackStack() },
+                navController = navController
             )
         }
 
+        // 📝 CREAR PUBLICACIÓN
         composable(Screen.CreatePost.route) {
             CreatePostScreen(
                 alVolverAtras = { navController.popBackStack() }
             )
         }
 
+        // 👤 PERFIL
         composable(Screen.Profile.route) {
             ProfileScreen(
-                alVolverAtras = { navController.popBackStack() }
+                alVolverAtras = { navController.popBackStack() },
+                alCerrarSesion = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                    }
+                }
             )
         }
     }

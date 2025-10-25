@@ -84,4 +84,12 @@ dependencies {
 
     // Compose UI Tooling
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    // DataStore Preferences (para manejar sesión del usuario)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+
 }

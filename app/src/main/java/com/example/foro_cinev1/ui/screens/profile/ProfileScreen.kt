@@ -1,5 +1,10 @@
 package com.example.foro_cinev1.ui.screens.profile
 
+import android.Manifest
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -9,22 +14,77 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
+import coil.compose.rememberAsyncImagePainter
+import com.example.foro_cinev1.data.datastore.SessionManager
+import com.example.foro_cinev1.utils.LocationHelper
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    alVolverAtras: () -> Unit
+    alVolverAtras: () -> Unit,
+    alCerrarSesion: () -> Unit
 ) {
-    // Datos temporales del usuario (tu compañero los traerá del backend)
-    var nombre by remember { mutableStateOf("Juan Pérez") }
-    var correo by remember { mutableStateOf("juan.perez@email.com") }
-    var ubicacion by remember { mutableStateOf("Santiago, Chile") }
+    val contexto = LocalContext.current
+    val sessionManager = remember { SessionManager(contexto) }
+    val locationHelper = remember { LocationHelper(contexto) }
+
+    var nombre by remember { mutableStateOf(sessionManager.obtenerNombre() ?: "Usuario") }
+    var correo by remember { mutableStateOf(sessionManager.obtenerCorreo() ?: "correo@ejemplo.com") }
+    var ubicacion by remember { mutableStateOf("Cargando ubicación…") }
+    var fotoUri by remember { mutableStateOf(sessionManager.obtenerFotoPerfil()?.toUri()) }
+
     var modoEdicion by remember { mutableStateOf(false) }
     var mostrarDialogoCerrarSesion by remember { mutableStateOf(false) }
 
     val estadoScroll = rememberScrollState()
+    val scope = rememberCoroutineScope()
+
+    // ✅ Solicitud de ambos permisos (preciso y aproximado)
+    val launcherPermisoUbicacion = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permisos ->
+        val permisoConcedido =
+            permisos[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                    permisos[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+
+        scope.launch {
+            if (permisoConcedido) {
+                ubicacion = "Cargando ubicación…"
+                val ciudad = locationHelper.obtenerCiudadActual()
+                ubicacion = ciudad ?: "Ubicación desconocida"
+            } else {
+                ubicacion = "Permiso denegado"
+            }
+        }
+    }
+
+    // 🔄 Lanza la solicitud de permisos al cargar la pantalla
+    LaunchedEffect(Unit) {
+        launcherPermisoUbicacion.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+        )
+    }
+
+    // 🖼️ Selector de imagen desde galería
+    val launcherGaleria = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            fotoUri = it
+            scope.launch {
+                sessionManager.guardarFotoPerfil(it.toString())
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -37,15 +97,8 @@ fun ProfileScreen(
                 },
                 actions = {
                     if (modoEdicion) {
-                        TextButton(onClick = {
-                            modoEdicion = false
-                            // Aquí tu compañero guardará los cambios
-                        }) {
-                            Text(
-                                "Guardar",
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                        TextButton(onClick = { modoEdicion = false }) {
+                            Text("Guardar", fontWeight = FontWeight.Bold)
                         }
                     } else {
                         IconButton(onClick = { modoEdicion = true }) {
@@ -65,37 +118,43 @@ fun ProfileScreen(
                 .padding(padding)
                 .verticalScroll(estadoScroll)
         ) {
-            // Sección de foto de perfil
+            // 🧍 Foto de perfil
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp),
+                    .height(220.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Avatar
                     Surface(
-                        modifier = Modifier.size(100.dp),
+                        modifier = Modifier.size(120.dp),
                         shape = MaterialTheme.shapes.extraLarge,
                         color = MaterialTheme.colorScheme.primaryContainer
                     ) {
-                        Box(
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = null,
-                                modifier = Modifier.size(60.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        if (fotoUri != null) {
+                            Image(
+                                painter = rememberAsyncImagePainter(fotoUri),
+                                contentDescription = "Foto de perfil",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
+                        } else {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(80.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
                         }
                     }
 
                     if (modoEdicion) {
-                        TextButton(onClick = { /* Cambiar foto */ }) {
+                        TextButton(onClick = { launcherGaleria.launch("image/*") }) {
                             Icon(Icons.Default.CameraAlt, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Cambiar foto")
@@ -106,7 +165,7 @@ fun ProfileScreen(
 
             Divider()
 
-            // Información del perfil
+            // 📋 Información del perfil
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -114,220 +173,32 @@ fun ProfileScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "Información Personal",
+                    "Información Personal",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
 
-                // Campo de nombre
                 if (modoEdicion) {
                     OutlinedTextField(
                         value = nombre,
                         onValueChange = { nombre = it },
                         label = { Text("Nombre") },
-                        leadingIcon = {
-                            Icon(Icons.Default.Person, contentDescription = null)
-                        },
+                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 } else {
-                    ItemPerfil(
-                        icono = Icons.Default.Person,
-                        titulo = "Nombre",
-                        valor = nombre
-                    )
+                    ItemPerfil(Icons.Default.Person, "Nombre", nombre)
                 }
 
-                // Campo de correo
-                if (modoEdicion) {
-                    OutlinedTextField(
-                        value = correo,
-                        onValueChange = { correo = it },
-                        label = { Text("Correo electrónico") },
-                        leadingIcon = {
-                            Icon(Icons.Default.Email, contentDescription = null)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else {
-                    ItemPerfil(
-                        icono = Icons.Default.Email,
-                        titulo = "Correo electrónico",
-                        valor = correo
-                    )
-                }
-
-                // Campo de ubicación
-                if (modoEdicion) {
-                    OutlinedTextField(
-                        value = ubicacion,
-                        onValueChange = { ubicacion = it },
-                        label = { Text("Ubicación") },
-                        leadingIcon = {
-                            Icon(Icons.Default.LocationOn, contentDescription = null)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else {
-                    ItemPerfil(
-                        icono = Icons.Default.LocationOn,
-                        titulo = "Ubicación",
-                        valor = ubicacion
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
+                ItemPerfil(Icons.Default.Email, "Correo electrónico", correo)
+                ItemPerfil(Icons.Default.LocationOn, "Ubicación", ubicacion)
 
                 Divider()
 
-                Spacer(modifier = Modifier.height(8.dp))
+                TarjetaEstadistica("12", "Publicaciones", Icons.Default.Forum)
+                TarjetaEstadistica("45", "Comentarios", Icons.Default.Comment)
 
-                // Estadísticas
-                Text(
-                    text = "Estadísticas",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    TarjetaEstadistica(
-                        numero = "12",
-                        etiqueta = "Publicaciones",
-                        icono = Icons.Default.Forum,
-                        modifier = Modifier.weight(1f)
-                    )
-                    TarjetaEstadistica(
-                        numero = "45",
-                        etiqueta = "Comentarios",
-                        icono = Icons.Default.Comment,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    TarjetaEstadistica(
-                        numero = "8",
-                        etiqueta = "Favoritos",
-                        icono = Icons.Default.Favorite,
-                        modifier = Modifier.weight(1f)
-                    )
-                    TarjetaEstadistica(
-                        numero = "28",
-                        etiqueta = "Me gusta",
-                        icono = Icons.Default.ThumbUp,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Divider()
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Configuración
-                Text(
-                    text = "Configuración",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Card(
-                    onClick = { /* Cambiar contraseña */ },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Icon(Icons.Default.Lock, contentDescription = null)
-                            Text("Cambiar contraseña")
-                        }
-                        Icon(
-                            Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                        )
-                    }
-                }
-
-                Card(
-                    onClick = { /* Notificaciones */ },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Icon(Icons.Default.Notifications, contentDescription = null)
-                            Text("Notificaciones")
-                        }
-                        Icon(
-                            Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                        )
-                    }
-                }
-
-                Card(
-                    onClick = { /* Privacidad */ },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Icon(Icons.Default.Security, contentDescription = null)
-                            Text("Privacidad y seguridad")
-                        }
-                        Icon(
-                            Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Botón de cerrar sesión
+                // 🚪 Botón cerrar sesión
                 OutlinedButton(
                     onClick = { mostrarDialogoCerrarSesion = true },
                     modifier = Modifier.fillMaxWidth(),
@@ -339,26 +210,23 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Cerrar Sesión")
                 }
-
-                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
 
-    // Diálogo de cerrar sesión
+    // 🪟 Diálogo de confirmación para cerrar sesión
     if (mostrarDialogoCerrarSesion) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoCerrarSesion = false },
             icon = { Icon(Icons.Default.Logout, contentDescription = null) },
             title = { Text("¿Cerrar sesión?") },
-            text = { Text("¿Estás seguro de que deseas cerrar sesión?") },
+            text = { Text("¿Seguro que deseas cerrar sesión?") },
             confirmButton = {
                 Button(
                     onClick = {
-                        // Aquí tu compañero manejará el cierre de sesión
-                        // Por ahora solo cierra el diálogo
+                        scope.launch { sessionManager.cerrarSesion() }
                         mostrarDialogoCerrarSesion = false
-                        alVolverAtras()
+                        alCerrarSesion()
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
@@ -384,9 +252,7 @@ fun ItemPerfil(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier
@@ -395,22 +261,10 @@ fun ItemPerfil(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(
-                icono,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
+            Icon(icono, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Column {
-                Text(
-                    text = titulo,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                )
-                Text(
-                    text = valor,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
-                )
+                Text(titulo, style = MaterialTheme.typography.labelMedium)
+                Text(valor, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
             }
         }
     }
@@ -420,39 +274,23 @@ fun ItemPerfil(
 fun TarjetaEstadistica(
     numero: String,
     etiqueta: String,
-    icono: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier
+    icono: androidx.compose.ui.graphics.vector.ImageVector
 ) {
     Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(
-                icono,
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-            Text(
-                text = numero,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-            Text(
-                text = etiqueta,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-            )
+            Icon(icono, contentDescription = null)
+            Text("$numero $etiqueta")
         }
     }
 }

@@ -2,58 +2,77 @@ package com.example.foro_cinev1.viewmodel
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.foro_cinev1.data.database.DatabaseHelper
 import com.example.foro_cinev1.domain.models.Post
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
-class PostViewModel(private val context: Context) : ViewModel() {
+class PostViewModel(context: Context) : ViewModel() {
+
+    private val db = DatabaseHelper(context)
 
     private val _posts = MutableStateFlow<List<Post>>(emptyList())
-    val posts: StateFlow<List<Post>> = _posts.asStateFlow()
+    val posts: StateFlow<List<Post>> = _posts
 
-    private var nextId = 1
+    private val _comentarios = MutableStateFlow<List<Map<String, String>>>(emptyList())
+    val comentarios: StateFlow<List<Map<String, String>>> = _comentarios
 
-    init {
-        cargarPostsEjemplo()
-    }
-
-    private fun cargarPostsEjemplo() {
-        _posts.value = listOf(
-            Post(
-                id = nextId++,
-                titulo = "¿Qué opinan de Dune 2?",
-                contenido = "Acabo de ver Dune 2 y quedé impresionado. La cinematografía es increíble y la actuación de Timothée Chalamet es fenomenal. ¿Qué les pareció a ustedes?",
-                autor = "CinéfiloUno",
-                fecha = "23/10/2025"
-            ),
-            Post(
-                id = nextId++,
-                titulo = "Recomendaciones de películas de terror",
-                contenido = "Busco películas de terror que realmente den miedo, no las típicas de jump scares. ¿Alguna sugerencia?",
-                autor = "TerrorFan",
-                fecha = "22/10/2025"
-            ),
-            Post(
-                id = nextId++,
-                titulo = "Análisis: El uso del color en Wes Anderson",
-                contenido = "Me fascina cómo Wes Anderson usa paletas de colores específicas para cada película. En 'The Grand Budapest Hotel' domina el rosa pastel, mientras que en 'Moonrise Kingdom' prevalecen los tonos tierra. ¿Alguien más ha notado estos patrones?",
-                autor = "AnalistaVisual",
-                fecha = "21/10/2025"
-            )
-        )
-    }
-
+    /** Cargar todas las publicaciones desde SQLite */
     fun cargarPosts() {
-        // Método para cargar posts desde el backend
+        viewModelScope.launch {
+            _posts.value = db.getAllPosts()
+        }
     }
 
+    /** Agregar un nuevo post */
     fun agregarPost(post: Post) {
-        val newPost = post.copy(id = nextId++)
-        _posts.value = listOf(newPost) + _posts.value
+        viewModelScope.launch {
+            db.insertPost(post)
+            cargarPosts()
+        }
     }
 
-    fun eliminarPost(postId: Int) {
-        _posts.value = _posts.value.filter { it.id != postId }
+    /** Eliminar un post por id */
+    fun eliminarPost(id: Int) {
+        viewModelScope.launch {
+            db.deletePost(id)
+            cargarPosts()
+        }
+    }
+
+    /**
+     * 🔥 Dar like o dislike con restricción por usuario
+     * @param postId ID del post
+     * @param userId ID del usuario (de SessionManager)
+     * @param like true = like, false = dislike
+     */
+    fun votarPost(postId: Int, userId: Int, like: Boolean) {
+        viewModelScope.launch {
+            val voto = if (like) 1 else -1
+            val exito = db.votarPost(userId, postId, voto)
+            if (exito) {
+                cargarPosts() // refresca la lista con los contadores actualizados
+            }
+        }
+    }
+
+    /** Agregar comentario a un post */
+    fun agregarComentario(postId: Int, autor: String, contenido: String) {
+        viewModelScope.launch {
+            val fecha = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+            db.insertComment(postId, autor, contenido, fecha)
+            cargarComentarios(postId)
+        }
+    }
+
+    /** Cargar comentarios de un post */
+    fun cargarComentarios(postId: Int) {
+        viewModelScope.launch {
+            _comentarios.value = db.getCommentsByPost(postId)
+        }
     }
 }

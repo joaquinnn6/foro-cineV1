@@ -47,7 +47,7 @@ fun SplashScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "ForoCine 🎬",
+                text = "CineVerse 🎬",
                 fontWeight = FontWeight.Bold,
                 fontSize = 28.sp,
                 color = MaterialTheme.colorScheme.primary

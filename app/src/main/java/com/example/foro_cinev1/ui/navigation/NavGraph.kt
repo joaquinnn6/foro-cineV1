@@ -92,7 +92,10 @@ fun AppNavGraph(
             HomeScreen(
                 alIrANoticias = { navController.navigate(Screen.NewsList.route) },
                 alIrAForo = { navController.navigate(Screen.Forum.route) },
-                alIrAPerfil = { navController.navigate(Screen.Profile.route) }
+                alIrAPerfil = { navController.navigate(Screen.Profile.route) },
+                alIrADetalleNoticia = { newsId ->
+                    navController.navigate(Screen.NewsDetail.createRoute(newsId))
+                }
             )
         }
 

@@ -14,16 +14,24 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.foro_cinev1.R
+import com.example.foro_cinev1.viewmodel.NewsItem
+import com.example.foro_cinev1.viewmodel.NewsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     alIrANoticias: () -> Unit,
     alIrAForo: () -> Unit,
-    alIrAPerfil: () -> Unit
+    alIrAPerfil: () -> Unit,
+    alIrADetalleNoticia: (Int) -> Unit,
+    newsViewModel: NewsViewModel = viewModel() // Inyectamos el ViewModel
 ) {
     var tabSeleccionada by remember { mutableStateOf(0) }
+    val noticias by newsViewModel.noticias.collectAsState()
+
+    // El LaunchedEffect ya no es necesario, el ViewModel carga los datos solo.
 
     Scaffold(
         topBar = {
@@ -56,19 +64,13 @@ fun HomeScreen(
                 )
                 NavigationBarItem(
                     selected = tabSeleccionada == 1,
-                    onClick = {
-                        tabSeleccionada = 1
-                        alIrANoticias()
-                    },
+                    onClick = alIrANoticias,
                     icon = { Icon(Icons.Default.Article, contentDescription = "Noticias") },
                     label = { Text("Noticias") }
                 )
                 NavigationBarItem(
                     selected = tabSeleccionada == 2,
-                    onClick = {
-                        tabSeleccionada = 2
-                        alIrAForo()
-                    },
+                    onClick = alIrAForo,
                     icon = { Icon(Icons.Default.Forum, contentDescription = "Foro") },
                     label = { Text("Foro") }
                 )
@@ -82,9 +84,9 @@ fun HomeScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 🏠 Sección de bienvenida
+            // 🏠 Sección de bienvenida (se mantiene igual)
             item {
-                Card(
+                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer
@@ -124,17 +126,16 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    items(5) { indice ->
+                    items(noticias) { noticia ->
                         TarjetaNoticia(
-                            titulo = "Noticia ${indice + 1}",
-                            resumen = "Descripción breve o titular de ejemplo...",
-                            alHacerClick = alIrANoticias
+                            noticia = noticia,
+                            alHacerClick = { alIrADetalleNoticia(noticia.id) }
                         )
                     }
                 }
             }
 
-            // 💬 Publicaciones recientes
+            // 💬 Publicaciones recientes (se mantiene igual)
             item {
                 Text(
                     text = "Publicaciones Recientes 💬",
@@ -150,8 +151,8 @@ fun HomeScreen(
                     alHacerClick = alIrAForo
                 )
             }
-
-            // 🎭 Categorías populares
+            
+            // 🎭 Categorías populares (se mantiene igual)
             item {
                 Text(
                     text = "Categorías Populares 🎭",
@@ -185,8 +186,7 @@ fun HomeScreen(
 
 @Composable
 fun TarjetaNoticia(
-    titulo: String,
-    resumen: String,
+    noticia: NewsItem,
     alHacerClick: () -> Unit
 ) {
     Card(
@@ -211,15 +211,16 @@ fun TarjetaNoticia(
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = titulo,
+                text = noticia.title,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = resumen,
+                text = noticia.summary,
                 fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2
             )
         }
     }

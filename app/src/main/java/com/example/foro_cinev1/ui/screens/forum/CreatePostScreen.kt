@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.example.foro_cinev1.data.datastore.SessionManager
 import com.example.foro_cinev1.domain.models.Post
 import com.example.foro_cinev1.viewmodel.PostViewModel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -31,10 +32,10 @@ fun CreatePostScreen(
     var autor by remember { mutableStateOf("") }
     var titulo by remember { mutableStateOf("") }
     var contenido by remember { mutableStateOf("") }
-    var mostrarError by remember { mutableStateOf(false) }
-    var mensajeError by remember { mutableStateOf("") }
-    var mostrarConfirmacion by remember { mutableStateOf(false) } // ✅ diálogo de éxito
+    var mostrarConfirmacion by remember { mutableStateOf(false) }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     val estadoScroll = rememberScrollState()
 
     LaunchedEffect(Unit) {
@@ -42,34 +43,30 @@ fun CreatePostScreen(
     }
 
     fun validarYPublicar() {
-        when {
-            titulo.isBlank() -> {
-                mensajeError = "El título es requerido"
-                mostrarError = true
+        var error = ""
+        if (autor.isBlank()) error = "El nombre del autor es requerido"
+        if (contenido.isBlank()) error = "El contenido es requerido"
+        if (titulo.isBlank()) error = "El título es requerido"
+
+        if (error.isNotEmpty()) {
+            scope.launch {
+                snackbarHostState.showSnackbar(error)
             }
-            contenido.isBlank() -> {
-                mensajeError = "El contenido es requerido"
-                mostrarError = true
-            }
-            autor.isBlank() -> {
-                mensajeError = "El nombre del autor es requerido"
-                mostrarError = true
-            }
-            else -> {
-                val fecha = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
-                val nuevaPublicacion = Post(
-                    titulo = titulo,
-                    contenido = contenido,
-                    autor = autor,
-                    fecha = fecha
-                )
-                viewModel.agregarPost(nuevaPublicacion)
-                mostrarConfirmacion = true // ✅ mostrar el diálogo de éxito
-            }
+        } else {
+            val fecha = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+            val nuevaPublicacion = Post(
+                titulo = titulo,
+                contenido = contenido,
+                autor = autor,
+                fecha = fecha
+            )
+            viewModel.agregarPost(nuevaPublicacion)
+            mostrarConfirmacion = true
         }
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Nueva Publicación") },
@@ -101,31 +98,7 @@ fun CreatePostScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 💬 Info inicial
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Comparte tus pensamientos sobre películas, series o el mundo del cine.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-
-            // 🧍 Autor (auto completado)
+            // ... (El resto del contenido de la columna se mantiene igual)
             OutlinedTextField(
                 value = autor,
                 onValueChange = { autor = it },
@@ -134,8 +107,6 @@ fun CreatePostScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
-
-            // 🎬 Título
             OutlinedTextField(
                 value = titulo,
                 onValueChange = { titulo = it },
@@ -145,8 +116,6 @@ fun CreatePostScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
-
-            // 📝 Contenido
             OutlinedTextField(
                 value = contenido,
                 onValueChange = { contenido = it },
@@ -156,16 +125,12 @@ fun CreatePostScreen(
                 maxLines = 15,
                 modifier = Modifier.fillMaxWidth()
             )
-
-            // Contador de caracteres
             Text(
                 text = "${contenido.length} caracteres",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 modifier = Modifier.align(Alignment.End)
             )
-
-            // 📩 Botón principal
             Button(
                 onClick = { validarYPublicar() },
                 modifier = Modifier
@@ -179,21 +144,6 @@ fun CreatePostScreen(
         }
     }
 
-    // ⚠️ Snackbar de error
-    if (mostrarError) {
-        Snackbar(
-            modifier = Modifier.padding(16.dp),
-            action = {
-                TextButton(onClick = { mostrarError = false }) {
-                    Text("OK")
-                }
-            }
-        ) {
-            Text(mensajeError)
-        }
-    }
-
-    // ✅ Diálogo de confirmación
     if (mostrarConfirmacion) {
         AlertDialog(
             onDismissRequest = { mostrarConfirmacion = false },

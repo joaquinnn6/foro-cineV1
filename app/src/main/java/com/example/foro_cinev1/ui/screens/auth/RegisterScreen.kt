@@ -13,12 +13,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.foro_cinev1.data.database.DatabaseHelper
+import com.example.foro_cinev1.data.datastore.SessionManager
+import com.example.foro_cinev1.domain.models.User
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,6 +31,11 @@ fun RegisterScreen(
     alVolverAtras: () -> Unit,
     alRegistrarseExitoso: () -> Unit
 ) {
+    val contexto = LocalContext.current
+    val dbHelper = remember { DatabaseHelper(contexto) }
+    val sessionManager = remember { SessionManager(contexto) }
+    val coroutineScope = rememberCoroutineScope()
+
     var nombre by remember { mutableStateOf("") }
     var correo by remember { mutableStateOf("") }
     var contraseña by remember { mutableStateOf("") }
@@ -39,45 +49,40 @@ fun RegisterScreen(
     var errorCorreo by remember { mutableStateOf<String?>(null) }
     var errorContraseña by remember { mutableStateOf<String?>(null) }
     var errorConfirmarContraseña by remember { mutableStateOf<String?>(null) }
+
+    var mensajeErrorGlobal by remember { mutableStateOf<String?>(null) }
     var estaCargando by remember { mutableStateOf(false) }
 
     val administradorFoco = LocalFocusManager.current
     val estadoScroll = rememberScrollState()
 
-    fun validarNombre(nombre: String): String? {
-        return when {
-            nombre.isBlank() -> "El nombre es requerido"
-            nombre.length < 3 -> "El nombre debe tener al menos 3 caracteres"
-            else -> null
-        }
+    // Funciones de validación
+    fun validarNombre(nombre: String): String? = when {
+        nombre.isBlank() -> "El nombre es requerido"
+        nombre.length < 3 -> "Debe tener al menos 3 caracteres"
+        else -> null
     }
 
-    fun validarCorreo(correo: String): String? {
-        return when {
-            correo.isBlank() -> "El correo es requerido"
-            !android.util.Patterns.EMAIL_ADDRESS.matcher(correo).matches() ->
-                "Formato de correo inválido"
-            else -> null
-        }
+    fun validarCorreo(correo: String): String? = when {
+        correo.isBlank() -> "El correo es requerido"
+        !android.util.Patterns.EMAIL_ADDRESS.matcher(correo).matches() ->
+            "Formato de correo inválido"
+        else -> null
     }
 
-    fun validarContraseña(contraseña: String): String? {
-        return when {
-            contraseña.isBlank() -> "La contraseña es requerida"
-            contraseña.length < 8 -> "La contraseña debe tener al menos 8 caracteres"
-            !contraseña.any { it.isDigit() } -> "Debe contener al menos un número"
-            !contraseña.any { it.isLowerCase() } -> "Debe contener al menos una minúscula"
-            !contraseña.any { it.isUpperCase() } -> "Debe contener al menos una mayúscula"
-            else -> null
-        }
+    fun validarContraseña(contraseña: String): String? = when {
+        contraseña.isBlank() -> "La contraseña es requerida"
+        contraseña.length < 8 -> "Debe tener al menos 8 caracteres"
+        !contraseña.any { it.isDigit() } -> "Debe contener al menos un número"
+        !contraseña.any { it.isLowerCase() } -> "Debe contener al menos una minúscula"
+        !contraseña.any { it.isUpperCase() } -> "Debe contener al menos una mayúscula"
+        else -> null
     }
 
-    fun validarConfirmarContraseña(contraseña: String, confirmar: String): String? {
-        return when {
-            confirmar.isBlank() -> "Confirma tu contraseña"
-            contraseña != confirmar -> "Las contraseñas no coinciden"
-            else -> null
-        }
+    fun validarConfirmarContraseña(contraseña: String, confirmar: String): String? = when {
+        confirmar.isBlank() -> "Confirma tu contraseña"
+        contraseña != confirmar -> "Las contraseñas no coinciden"
+        else -> null
     }
 
     fun manejarRegistro() {
@@ -87,10 +92,32 @@ fun RegisterScreen(
         errorConfirmarContraseña = validarConfirmarContraseña(contraseña, confirmarContraseña)
 
         if (errorNombre == null && errorCorreo == null &&
-            errorContraseña == null && errorConfirmarContraseña == null) {
+            errorContraseña == null && errorConfirmarContraseña == null
+        ) {
             estaCargando = true
-            // Aquí tu compañero conectará con el backend
-            alRegistrarseExitoso()
+            mensajeErrorGlobal = null
+
+            coroutineScope.launch {
+                val nuevoUsuario = User(
+                    id = 0,
+                    nombre = nombre,
+                    correo = correo,
+                    contraseña = contraseña,
+                    ubicacion = ubicacion
+                )
+
+                val exito = dbHelper.addUser(nuevoUsuario)
+                if (exito) {
+                    val usuario = dbHelper.loginUser(correo, contraseña)
+                    usuario?.let {
+                        sessionManager.guardarSesion(it.id, it.nombre, it.correo)
+                    }
+                    alRegistrarseExitoso()
+                } else {
+                    mensajeErrorGlobal = "El correo ya está registrado"
+                }
+                estaCargando = false
+            }
         }
     }
 
@@ -134,17 +161,12 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Campo de nombre
+            // --- Campo Nombre ---
             OutlinedTextField(
                 value = nombre,
-                onValueChange = {
-                    nombre = it
-                    errorNombre = null
-                },
+                onValueChange = { nombre = it; errorNombre = null },
                 label = { Text("Nombre completo") },
-                leadingIcon = {
-                    Icon(Icons.Default.Person, contentDescription = null)
-                },
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                 isError = errorNombre != null,
                 supportingText = {
                     AnimatedVisibility(visible = errorNombre != null) {
@@ -164,17 +186,12 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de correo
+            // --- Campo Correo ---
             OutlinedTextField(
                 value = correo,
-                onValueChange = {
-                    correo = it
-                    errorCorreo = null
-                },
+                onValueChange = { correo = it; errorCorreo = null },
                 label = { Text("Correo electrónico") },
-                leadingIcon = {
-                    Icon(Icons.Default.Email, contentDescription = null)
-                },
+                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                 isError = errorCorreo != null,
                 supportingText = {
                     AnimatedVisibility(visible = errorCorreo != null) {
@@ -194,14 +211,12 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de ubicación
+            // --- Campo Ubicación (opcional) ---
             OutlinedTextField(
                 value = ubicacion,
                 onValueChange = { ubicacion = it },
                 label = { Text("Ubicación (opcional)") },
-                leadingIcon = {
-                    Icon(Icons.Default.LocationOn, contentDescription = null)
-                },
+                leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
                     imeAction = ImeAction.Next
@@ -215,28 +230,22 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de contraseña
+            // --- Contraseña ---
             OutlinedTextField(
                 value = contraseña,
-                onValueChange = {
-                    contraseña = it
-                    errorContraseña = null
-                },
+                onValueChange = { contraseña = it; errorContraseña = null },
                 label = { Text("Contraseña") },
-                leadingIcon = {
-                    Icon(Icons.Default.Lock, contentDescription = null)
-                },
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 trailingIcon = {
                     IconButton(onClick = { contraseñaVisible = !contraseñaVisible }) {
                         Icon(
                             imageVector = if (contraseñaVisible) Icons.Default.Visibility
                             else Icons.Default.VisibilityOff,
-                            contentDescription = if (contraseñaVisible) "Ocultar" else "Mostrar"
+                            contentDescription = "Mostrar/Ocultar"
                         )
                     }
                 },
-                visualTransformation = if (contraseñaVisible) VisualTransformation.None
-                else PasswordVisualTransformation(),
+                visualTransformation = if (contraseñaVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 isError = errorContraseña != null,
                 supportingText = {
                     AnimatedVisibility(visible = errorContraseña != null) {
@@ -256,28 +265,22 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Confirmar contraseña
+            // --- Confirmar Contraseña ---
             OutlinedTextField(
                 value = confirmarContraseña,
-                onValueChange = {
-                    confirmarContraseña = it
-                    errorConfirmarContraseña = null
-                },
+                onValueChange = { confirmarContraseña = it; errorConfirmarContraseña = null },
                 label = { Text("Confirmar contraseña") },
-                leadingIcon = {
-                    Icon(Icons.Default.Lock, contentDescription = null)
-                },
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 trailingIcon = {
                     IconButton(onClick = { confirmarContraseñaVisible = !confirmarContraseñaVisible }) {
                         Icon(
                             imageVector = if (confirmarContraseñaVisible) Icons.Default.Visibility
                             else Icons.Default.VisibilityOff,
-                            contentDescription = if (confirmarContraseñaVisible) "Ocultar" else "Mostrar"
+                            contentDescription = "Mostrar/Ocultar"
                         )
                     }
                 },
-                visualTransformation = if (confirmarContraseñaVisible) VisualTransformation.None
-                else PasswordVisualTransformation(),
+                visualTransformation = if (confirmarContraseñaVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 isError = errorConfirmarContraseña != null,
                 supportingText = {
                     AnimatedVisibility(visible = errorConfirmarContraseña != null) {
@@ -288,19 +291,14 @@ fun RegisterScreen(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done
                 ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        administradorFoco.clearFocus()
-                        manejarRegistro()
-                    }
-                ),
+                keyboardActions = KeyboardActions(onDone = { manejarRegistro() }),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Botón de registro
+            // --- Botón de registro ---
             Button(
                 onClick = { manejarRegistro() },
                 modifier = Modifier
@@ -316,6 +314,15 @@ fun RegisterScreen(
                 } else {
                     Text("Crear Cuenta")
                 }
+            }
+
+            // Mensaje global de error
+            AnimatedVisibility(visible = mensajeErrorGlobal != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = mensajeErrorGlobal ?: "",
+                    color = MaterialTheme.colorScheme.error
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))

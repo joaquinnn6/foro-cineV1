@@ -1,6 +1,5 @@
 package com.example.foro_cinev1.ui.screens.forum
 
-import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,40 +13,70 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import com.example.foro_cinev1.data.datastore.SessionManager
 import com.example.foro_cinev1.domain.models.Post
-import com.example.foro_cinev1.ui.theme.ForocineV1Theme
+import com.example.foro_cinev1.ui.navigation.Screen
 import com.example.foro_cinev1.viewmodel.PostViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ForumScreen(
     alIrACrearPublicacion: () -> Unit,
-    alVolverAtras: () -> Unit
+    alVolverAtras: () -> Unit,
+    navController: NavController
 ) {
     val contexto = LocalContext.current
     val viewModel = remember { PostViewModel(contexto) }
+    val sessionManager = remember { SessionManager(contexto) }
     val publicaciones by viewModel.posts.collectAsState()
 
-    // Cargar publicaciones al iniciar
+    // Datos de usuario
+    var nombreUsuario by remember { mutableStateOf<String?>(null) }
+    var userId by remember { mutableStateOf<Int?>(null) }
+
     LaunchedEffect(Unit) {
+        nombreUsuario = sessionManager.obtenerNombre()
+        userId = sessionManager.obtenerId()
         viewModel.cargarPosts()
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Foro de Cine", fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text("Foro de Cine 🎬", fontWeight = FontWeight.Bold)
+                        if (!nombreUsuario.isNullOrEmpty()) {
+                            Text(
+                                text = "Bienvenido, ${nombreUsuario!!.split(" ")[0]} 👋",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = alVolverAtras) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
+                actions = {
+                    IconButton(onClick = {
+                        sessionManager.cerrarSesion()
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.Home.route) { inclusive = true }
+                        }
+                    }) {
+                        Icon(Icons.Default.Logout, contentDescription = "Cerrar sesión")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         },
@@ -67,10 +96,7 @@ fun ForumScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
                         Icons.Default.Forum,
                         contentDescription = null,
@@ -100,7 +126,9 @@ fun ForumScreen(
                 items(publicaciones) { publicacion ->
                     TarjetaPublicacion(
                         publicacion = publicacion,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        sessionManager = sessionManager,
+                        userId = userId
                     )
                 }
             }
@@ -111,30 +139,29 @@ fun ForumScreen(
 @Composable
 fun TarjetaPublicacion(
     publicacion: Post,
-    viewModel: PostViewModel
+    viewModel: PostViewModel,
+    sessionManager: SessionManager,
+    userId: Int?
 ) {
     var mostrarDialogoEliminar by remember { mutableStateOf(false) }
+    var mostrarComentarios by remember { mutableStateOf(false) }
+
+    // Estado local para colorear los botones según el voto actual
+    var votoUsuario by remember { mutableStateOf(0) } // 0 = ninguno, 1 = like, -1 = dislike
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             // Encabezado
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     Icon(
                         Icons.Default.Person,
                         contentDescription = null,
@@ -167,7 +194,6 @@ fun TarjetaPublicacion(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Título
             Text(
                 text = publicacion.titulo,
                 style = MaterialTheme.typography.titleMedium,
@@ -176,7 +202,6 @@ fun TarjetaPublicacion(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Contenido
             Text(
                 text = publicacion.contenido,
                 style = MaterialTheme.typography.bodyMedium,
@@ -187,22 +212,48 @@ fun TarjetaPublicacion(
 
             // Acciones
             Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = { /* Me gusta */ }) {
+                // 👍 LIKE
+                TextButton(onClick = {
+                    userId?.let {
+                        viewModel.votarPost(publicacion.id, it, true)
+                        votoUsuario = if (votoUsuario == 1) 0 else 1
+                    }
+                }) {
                     Icon(
                         Icons.Default.ThumbUp,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        contentDescription = "Me gusta",
+                        tint = if (votoUsuario == 1) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Me gusta")
+                    Text("(${publicacion.likes})")
                 }
 
-                TextButton(onClick = { /* Comentar */ }) {
+                // 👎 DISLIKE
+                TextButton(onClick = {
+                    userId?.let {
+                        viewModel.votarPost(publicacion.id, it, false)
+                        votoUsuario = if (votoUsuario == -1) 0 else -1
+                    }
+                }) {
+                    Icon(
+                        Icons.Default.ThumbDown,
+                        contentDescription = "No me gusta",
+                        tint = if (votoUsuario == -1) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("(${publicacion.dislikes})")
+                }
+
+                // 💬 COMENTAR
+                TextButton(onClick = { mostrarComentarios = true }) {
                     Icon(
                         Icons.AutoMirrored.Filled.Comment,
-                        contentDescription = null,
+                        contentDescription = "Comentar",
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -212,7 +263,56 @@ fun TarjetaPublicacion(
         }
     }
 
-    // Diálogo de confirmación de eliminación
+    // 💬 Diálogo de comentarios
+    if (mostrarComentarios) {
+        var nuevoComentario by remember { mutableStateOf("") }
+        val autor = sessionManager.obtenerNombre() ?: "Anónimo"
+        val listaComentarios by viewModel.comentarios.collectAsState()
+
+        AlertDialog(
+            onDismissRequest = { mostrarComentarios = false },
+            title = { Text("Comentarios de ${publicacion.titulo}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (listaComentarios.isEmpty()) {
+                        Text("No hay comentarios aún.")
+                    } else {
+                        listaComentarios.forEach { comentario ->
+                            Text(
+                                text = "💬 ${comentario["autor"]}: ${comentario["contenido"]} (${comentario["fecha"]})",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+
+                    Divider(Modifier.padding(vertical = 8.dp))
+
+                    OutlinedTextField(
+                        value = nuevoComentario,
+                        onValueChange = { nuevoComentario = it },
+                        label = { Text("Escribe un comentario...") }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (nuevoComentario.isNotBlank()) {
+                            viewModel.agregarComentario(publicacion.id, autor, nuevoComentario)
+                            nuevoComentario = ""
+                        }
+                    }
+                ) { Text("Enviar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarComentarios = false }) {
+                    Text("Cerrar")
+                }
+            }
+        )
+    }
+
+    // 🗑️ Diálogo de eliminación
     if (mostrarDialogoEliminar) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoEliminar = false },
@@ -228,9 +328,7 @@ fun TarjetaPublicacion(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     )
-                ) {
-                    Text("Eliminar")
-                }
+                ) { Text("Eliminar") }
             },
             dismissButton = {
                 TextButton(onClick = { mostrarDialogoEliminar = false }) {
@@ -240,4 +338,3 @@ fun TarjetaPublicacion(
         )
     }
 }
-

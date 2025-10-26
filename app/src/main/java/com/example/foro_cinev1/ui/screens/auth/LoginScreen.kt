@@ -11,55 +11,67 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.foro_cinev1.data.database.DatabaseHelper
+import com.example.foro_cinev1.data.datastore.SessionManager
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     alIrARegistro: () -> Unit,
     alLoguearseExitoso: () -> Unit
 ) {
+    val contexto = LocalContext.current
+    val dbHelper = remember { DatabaseHelper(contexto) }
+    val sessionManager = remember { SessionManager(contexto) }
+
     var correo by remember { mutableStateOf("") }
     var contraseña by remember { mutableStateOf("") }
     var contraseñaVisible by remember { mutableStateOf(false) }
+
     var errorCorreo by remember { mutableStateOf<String?>(null) }
     var errorContraseña by remember { mutableStateOf<String?>(null) }
+    var mensajeErrorGlobal by remember { mutableStateOf<String?>(null) }
+
     var estaCargando by remember { mutableStateOf(false) }
 
     val administradorFoco = LocalFocusManager.current
 
-    fun validarCorreo(correo: String): String? {
-        return when {
-            correo.isBlank() -> "El correo es requerido"
-            !android.util.Patterns.EMAIL_ADDRESS.matcher(correo).matches() ->
-                "Formato de correo inválido"
-            else -> null
-        }
+    fun validarCorreo(correo: String): String? = when {
+        correo.isBlank() -> "El correo es requerido"
+        !android.util.Patterns.EMAIL_ADDRESS.matcher(correo).matches() ->
+            "Formato de correo inválido"
+        else -> null
     }
 
-    fun validarContraseña(contraseña: String): String? {
-        return when {
-            contraseña.isBlank() -> "La contraseña es requerida"
-            contraseña.length < 8 -> "La contraseña debe tener al menos 8 caracteres"
-            !contraseña.any { it.isDigit() } -> "Debe contener al menos un número"
-            !contraseña.any { it.isLowerCase() } -> "Debe contener al menos una minúscula"
-            !contraseña.any { it.isUpperCase() } -> "Debe contener al menos una mayúscula"
-            else -> null
-        }
+    fun validarContraseña(contraseña: String): String? = when {
+        contraseña.isBlank() -> "La contraseña es requerida"
+        contraseña.length < 8 -> "Debe tener al menos 8 caracteres"
+        else -> null
     }
 
     fun manejarLogin() {
         errorCorreo = validarCorreo(correo)
         errorContraseña = validarContraseña(contraseña)
+        mensajeErrorGlobal = null
 
         if (errorCorreo == null && errorContraseña == null) {
             estaCargando = true
-            // Aquí tu compañero conectará con el backend
-            alLoguearseExitoso()
+
+            val usuario = dbHelper.loginUser(correo, contraseña)
+            if (usuario != null) {
+                sessionManager.guardarSesion(usuario.id, usuario.nombre, usuario.correo)
+                alLoguearseExitoso()
+            } else {
+                mensajeErrorGlobal = "Correo o contraseña incorrectos"
+            }
+            estaCargando = false
         }
     }
 
@@ -74,7 +86,7 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo/Icono
+            // Logo
             Icon(
                 imageVector = Icons.Default.Movie,
                 contentDescription = null,
@@ -98,7 +110,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Campo de correo
+            // Correo
             OutlinedTextField(
                 value = correo,
                 onValueChange = {
@@ -106,9 +118,7 @@ fun LoginScreen(
                     errorCorreo = null
                 },
                 label = { Text("Correo electrónico") },
-                leadingIcon = {
-                    Icon(Icons.Default.Email, contentDescription = null)
-                },
+                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                 isError = errorCorreo != null,
                 supportingText = {
                     AnimatedVisibility(visible = errorCorreo != null) {
@@ -128,7 +138,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de contraseña
+            // Contraseña
             OutlinedTextField(
                 value = contraseña,
                 onValueChange = {
@@ -136,21 +146,20 @@ fun LoginScreen(
                     errorContraseña = null
                 },
                 label = { Text("Contraseña") },
-                leadingIcon = {
-                    Icon(Icons.Default.Lock, contentDescription = null)
-                },
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 trailingIcon = {
                     IconButton(onClick = { contraseñaVisible = !contraseñaVisible }) {
                         Icon(
                             imageVector = if (contraseñaVisible) Icons.Default.Visibility
                             else Icons.Default.VisibilityOff,
-                            contentDescription = if (contraseñaVisible) "Ocultar contraseña"
+                            contentDescription = if (contraseñaVisible)
+                                "Ocultar contraseña"
                             else "Mostrar contraseña"
                         )
                     }
                 },
-                visualTransformation = if (contraseñaVisible) VisualTransformation.None
-                else PasswordVisualTransformation(),
+                visualTransformation = if (contraseñaVisible)
+                    VisualTransformation.None else PasswordVisualTransformation(),
                 isError = errorContraseña != null,
                 supportingText = {
                     AnimatedVisibility(visible = errorContraseña != null) {
@@ -191,9 +200,18 @@ fun LoginScreen(
                 }
             }
 
+            // Mensaje global de error
+            AnimatedVisibility(visible = mensajeErrorGlobal != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = mensajeErrorGlobal ?: "",
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Botón de registro
+            // Enlace a registro
             TextButton(onClick = alIrARegistro) {
                 Text("¿No tienes cuenta? Regístrate")
             }

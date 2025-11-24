@@ -42,6 +42,7 @@ android {
     }
 }
 
+
 dependencies {
     // Core Android
     implementation(libs.androidx.core.ktx)
@@ -65,11 +66,21 @@ dependencies {
     // Icons Extended
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
 
-    // Biometric
-    implementation("androidx.biometric:biometric:1.2.0-alpha05")
-
     // Coil para imágenes
     implementation("io.coil-kt:coil-compose:2.5.0")
+
+    // DataStore Preferences
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // Google Play Services Location
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+
+    //  Retrofit + Gson para API
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.google.code.gson:gson:2.10.1")
 
     // Testing
     testImplementation(libs.junit)
@@ -81,15 +92,4 @@ dependencies {
     // Debug
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-
-    // Compose UI Tooling
-    debugImplementation("androidx.compose.ui:ui-tooling")
-
-    // DataStore Preferences (para manejar sesión del usuario)
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
-
-    implementation("com.google.android.gms:play-services-location:21.0.1")
-
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
-
 }

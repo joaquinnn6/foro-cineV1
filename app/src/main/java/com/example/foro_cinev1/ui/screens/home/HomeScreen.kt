@@ -10,14 +10,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.foro_cinev1.R
-import com.example.foro_cinev1.viewmodel.NewsItem
-import com.example.foro_cinev1.viewmodel.NewsViewModel
+import com.example.foro_cinev1.data.api.models.Movie
+import com.example.foro_cinev1.viewmodel.MovieViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,12 +28,12 @@ fun HomeScreen(
     alIrAForo: () -> Unit,
     alIrAPerfil: () -> Unit,
     alIrADetalleNoticia: (Int) -> Unit,
-    newsViewModel: NewsViewModel = viewModel() // Inyectamos el ViewModel
+    movieViewModel: MovieViewModel = viewModel()
 ) {
     var tabSeleccionada by remember { mutableStateOf(0) }
-    val noticias by newsViewModel.noticias.collectAsState()
-
-    // El LaunchedEffect ya no es necesario, el ViewModel carga los datos solo.
+    val peliculasPopulares by movieViewModel.popularMovies.collectAsState()
+    val isLoading by movieViewModel.isLoading.collectAsState()
+    val errorMessage by movieViewModel.errorMessage.collectAsState()
 
     Scaffold(
         topBar = {
@@ -84,9 +86,9 @@ fun HomeScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 🏠 Sección de bienvenida (se mantiene igual)
+            // Bienvenida
             item {
-                 Card(
+                Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer
@@ -105,40 +107,101 @@ fun HomeScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Explora noticias, comparte opiniones y disfruta del mundo del cine.",
+                            text = "Descubre las mejores películas y comparte tus opiniones.",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
             }
 
-            // 📰 Noticias destacadas
-            item {
-                Text(
-                    text = "Noticias Destacadas 📰",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
+            // Mensaje de error
+            if (errorMessage != null) {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Error, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text("Error al cargar películas", fontWeight = FontWeight.Bold)
+                                Text(errorMessage ?: "Error desconocido", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
             }
 
+            // Título de películas
             item {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(noticias) { noticia ->
-                        TarjetaNoticia(
-                            noticia = noticia,
-                            alHacerClick = { alIrADetalleNoticia(noticia.id) }
+                    Text(
+                        text = "🔥 Películas Populares",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
                         )
                     }
                 }
             }
 
-            // 💬 Publicaciones recientes (se mantiene igual)
+            // Lista de películas
+            item {
+                if (peliculasPopulares.isEmpty() && !isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.Movie,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "No hay películas disponibles",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = { movieViewModel.loadPopularMovies() }) {
+                                Text("Reintentar")
+                            }
+                        }
+                    }
+                } else {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        items(peliculasPopulares.take(10)) { pelicula ->
+                            TarjetaPelicula(pelicula = pelicula)
+                        }
+                    }
+                }
+            }
+
+            // Publicaciones del foro
             item {
                 Text(
-                    text = "Publicaciones Recientes 💬",
+                    text = "💬 Publicaciones Recientes",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -151,11 +214,11 @@ fun HomeScreen(
                     alHacerClick = alIrAForo
                 )
             }
-            
-            // 🎭 Categorías populares (se mantiene igual)
+
+            // Categorías
             item {
                 Text(
-                    text = "Categorías Populares 🎭",
+                    text = "🎭 Categorías Populares",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -185,43 +248,53 @@ fun HomeScreen(
 }
 
 @Composable
-fun TarjetaNoticia(
-    noticia: NewsItem,
-    alHacerClick: () -> Unit
-) {
+fun TarjetaPelicula(pelicula: Movie) {
     Card(
-        onClick = alHacerClick,
         modifier = Modifier
-            .width(220.dp)
-            .height(140.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(3.dp)
+            .width(140.dp)
+            .height(240.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Icon(
-                Icons.Default.Article,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp)
+        Column {
+            AsyncImage(
+                model = pelicula.getPosterUrl(),
+                contentDescription = pelicula.title,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp),
+                contentScale = ContentScale.Crop
             )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = noticia.title,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = noticia.summary,
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2
-            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
+            ) {
+                Text(
+                    text = pelicula.title,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = String.format("%.1f", pelicula.voteAverage),
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+            }
         }
     }
 }

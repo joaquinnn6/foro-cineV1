@@ -9,31 +9,35 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.foro_cinev1.viewmodel.NewsItem // Importación correcta
-import com.example.foro_cinev1.viewmodel.NewsViewModel
+import coil.compose.AsyncImage
+import com.example.foro_cinev1.domain.models.MovieNewsItem
+import com.example.foro_cinev1.domain.models.NewsType
+import com.example.foro_cinev1.viewmodel.MovieNewsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewsListScreen(
     alVolverAtras: () -> Unit,
-    alIrADetalle: (Int) -> Unit,
-    viewModel: NewsViewModel = viewModel() // Inyectamos el ViewModel
+    alIrADetalle: (String) -> Unit,
+    viewModel: MovieNewsViewModel = viewModel()
 ) {
     val newsList by viewModel.noticias.collectAsState()
-
-    // El LaunchedEffect se elimina porque el ViewModel carga los datos automáticamente.
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
     var showSearch by remember { mutableStateOf(false) }
+    var selectedFilter by remember { mutableStateOf("Todos") }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     if (showSearch) {
                         TextField(
                             value = searchQuery,
@@ -42,8 +46,7 @@ fun NewsListScreen(
                             singleLine = true,
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                focusedIndicatorColor = MaterialTheme.colorScheme.primary
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface
                             ),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -60,8 +63,11 @@ fun NewsListScreen(
                     IconButton(onClick = { showSearch = !showSearch }) {
                         Icon(
                             if (showSearch) Icons.Default.Close else Icons.Default.Search,
-                            contentDescription = if (showSearch) "Cerrar búsqueda" else "Buscar"
+                            contentDescription = "Buscar"
                         )
+                    }
+                    IconButton(onClick = { viewModel.cargarNoticiasReales() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Actualizar")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -73,51 +79,116 @@ fun NewsListScreen(
             )
         }
     ) { padding ->
-        val filteredNews = if (searchQuery.isBlank()) {
-            newsList
-        } else {
-            newsList.filter { 
-                it.title.contains(searchQuery, ignoreCase = true) ||
-                it.summary.contains(searchQuery, ignoreCase = true)
-            }
-        }
-
-        if (filteredNews.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            // Filtros de categoría
+            ScrollableTabRow(
+                selectedTabIndex = listOf("Todos", "Estrenos", "Tendencias", "Críticas", "Recomendaciones")
+                    .indexOf(selectedFilter),
+                modifier = Modifier.fillMaxWidth(),
+                edgePadding = 16.dp
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Default.SearchOff,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "No se encontraron noticias",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                listOf("Todos", "Estrenos", "Tendencias", "Críticas", "Recomendaciones").forEach { category ->
+                    Tab(
+                        selected = selectedFilter == category,
+                        onClick = { selectedFilter = category },
+                        text = { Text(category) }
                     )
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(filteredNews) { news ->
-                    NewsCard(
-                        news = news,
-                        onClickCard = { alIrADetalle(news.id) },
-                        onToggleFavorite = { viewModel.toggleFavorite(news.id) } // Usamos el ViewModel
+
+            // Mensaje de error
+            errorMessage?.let { error ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
                     )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.Error, contentDescription = null)
+                        Column {
+                            Text("Error al cargar", fontWeight = FontWeight.Bold)
+                            Text(error, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+
+            // Contenido
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CircularProgressIndicator()
+                        Text("Cargando noticias...")
+                    }
+                }
+            } else {
+                val filteredNews = newsList.filter { news ->
+                    (selectedFilter == "Todos" || news.category == selectedFilter) &&
+                            (searchQuery.isBlank() ||
+                                    news.title.contains(searchQuery, ignoreCase = true) ||
+                                    news.summary.contains(searchQuery, ignoreCase = true))
+                }
+
+                if (filteredNews.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.SearchOff,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                            )
+                            Text("No se encontraron noticias")
+                            Button(onClick = { viewModel.cargarNoticiasReales() }) {
+                                Text("Reintentar")
+                            }
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(filteredNews) { news ->
+                            when (news.type) {
+                                NewsType.RECOMMENDATION -> {
+                                    MultiMovieNewsCard(
+                                        news = news,
+                                        onClickCard = { alIrADetalle(news.id) }
+                                    )
+                                }
+                                else -> {
+                                    SingleMovieNewsCard(
+                                        news = news,
+                                        onClickCard = { alIrADetalle(news.id) }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -125,95 +196,235 @@ fun NewsListScreen(
 }
 
 @Composable
-fun NewsCard(
-    news: NewsItem,
-    onClickCard: () -> Unit,
-    onToggleFavorite: () -> Unit // Simplificado, el ID ya no es necesario aquí
+fun SingleMovieNewsCard(
+    news: MovieNewsItem,
+    onClickCard: () -> Unit
 ) {
     Card(
         onClick = onClickCard,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    // Categoría
+        Column {
+            // Imagen destacada
+            news.imageUrl?.let { url ->
+                Box {
+                    AsyncImage(
+                        model = url,
+                        contentDescription = news.title,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    // Badge de categoría
                     Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(12.dp),
+                        color = when (news.type) {
+                            NewsType.NEW_RELEASE -> MaterialTheme.colorScheme.primary
+                            NewsType.TRENDING -> MaterialTheme.colorScheme.tertiary
+                            NewsType.TOP_RATED -> MaterialTheme.colorScheme.secondary
+                            else -> MaterialTheme.colorScheme.surface
+                        },
                         shape = MaterialTheme.shapes.small
                     ) {
                         Text(
                             text = news.category,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            fontWeight = FontWeight.Bold
                         )
                     }
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    // Título
+                }
+            }
+
+            // Contenido
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = news.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = news.summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.AccessTime,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                        Text(
+                            text = news.date,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+
+                    // Rating si es película individual
+                    news.movie?.let { movie ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Star,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = String.format("%.1f", movie.voteAverage),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MultiMovieNewsCard(
+    news: MovieNewsItem,
+    onClickCard: () -> Unit
+) {
+    Card(
+        onClick = onClickCard,
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
                     Text(
                         text = news.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
                     )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    // Resumen
                     Text(
-                        text = news.summary,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
+                        text = news.date,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                 }
-                
-                // Botón de favorito
-                IconButton(onClick = onToggleFavorite) {
-                    Icon(
-                        imageVector = if (news.isFavorite) Icons.Default.Favorite 
-                                     else Icons.Default.FavoriteBorder,
-                        contentDescription = if (news.isFavorite) "Quitar de favoritos" 
-                                           else "Agregar a favoritos",
-                        tint = if (news.isFavorite) MaterialTheme.colorScheme.error 
-                              else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Text(
+                        text = news.category,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Fecha
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Default.AccessTime,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = news.date,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
+
+            Text(
+                text = news.summary,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+
+            // Lista de películas
+            news.movies?.let { movies ->
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    movies.take(5).forEachIndexed { index, movie ->
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${index + 1}",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+
+                                AsyncImage(
+                                    model = movie.getPosterUrl(),
+                                    contentDescription = movie.title,
+                                    modifier = Modifier
+                                        .width(40.dp)
+                                        .height(60.dp),
+                                    contentScale = ContentScale.Crop
+                                )
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = movie.title,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Star,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = String.format("%.1f", movie.voteAverage),
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+
+                                Icon(
+                                    Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

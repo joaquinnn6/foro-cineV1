@@ -27,7 +27,7 @@ fun HomeScreen(
     alIrANoticias: () -> Unit,
     alIrAForo: () -> Unit,
     alIrAPerfil: () -> Unit,
-    alIrADetalleNoticia: (Int) -> Unit,
+    alIrADetalleNoticia: (String) -> Unit,
     movieViewModel: MovieViewModel = viewModel()
 ) {
     var tabSeleccionada by remember { mutableStateOf(0) }

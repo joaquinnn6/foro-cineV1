@@ -45,7 +45,6 @@ fun AppNavGraph(
         }
     ) {
 
-        // 🟣 SPLASH
         composable(Screen.Splash.route) {
             SplashScreen(
                 onSesionActiva = {
@@ -61,7 +60,6 @@ fun AppNavGraph(
             )
         }
 
-        // 🟢 LOGIN
         composable(Screen.Login.route) {
             LoginScreen(
                 alLoguearseExitoso = {
@@ -75,7 +73,6 @@ fun AppNavGraph(
             )
         }
 
-        // 🟡 REGISTRO
         composable(Screen.Register.route) {
             RegisterScreen(
                 alVolverAtras = { navController.popBackStack() },
@@ -87,7 +84,6 @@ fun AppNavGraph(
             )
         }
 
-        // 🔵 HOME
         composable(Screen.Home.route) {
             HomeScreen(
                 alIrANoticias = { navController.navigate(Screen.NewsList.route) },
@@ -99,7 +95,6 @@ fun AppNavGraph(
             )
         }
 
-        // 📰 LISTA DE NOTICIAS
         composable(Screen.NewsList.route) {
             NewsListScreen(
                 alVolverAtras = { navController.popBackStack() },
@@ -109,19 +104,18 @@ fun AppNavGraph(
             )
         }
 
-        // 🗞️ DETALLE DE NOTICIA
+        // ✅ ACTUALIZA ESTO - ahora usa String
         composable(
             route = Screen.NewsDetail.route,
-            arguments = listOf(navArgument("newsId") { type = NavType.IntType })
+            arguments = listOf(navArgument("newsId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val newsId = backStackEntry.arguments?.getInt("newsId") ?: 0
+            val newsId = backStackEntry.arguments?.getString("newsId") ?: ""
             NewsDetailScreen(
                 newsId = newsId,
                 alVolverAtras = { navController.popBackStack() }
             )
         }
 
-        // 💬 FORO
         composable(Screen.Forum.route) {
             ForumScreen(
                 alIrACrearPublicacion = { navController.navigate(Screen.CreatePost.route) },
@@ -130,14 +124,12 @@ fun AppNavGraph(
             )
         }
 
-        // 📝 CREAR PUBLICACIÓN
         composable(Screen.CreatePost.route) {
             CreatePostScreen(
                 alVolverAtras = { navController.popBackStack() }
             )
         }
 
-        // 👤 PERFIL
         composable(Screen.Profile.route) {
             ProfileScreen(
                 alVolverAtras = { navController.popBackStack() },

@@ -1,10 +1,10 @@
-package com.cineverse.auth;
+package com.foro_cine.backend;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class AuthServiceApplicationTests {
+class BackendApplicationTests {
 
 	@Test
 	void contextLoads() {

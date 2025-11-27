@@ -221,7 +221,7 @@ class DatabaseHelper(context: Context) :
         val values = ContentValues().apply {
             put("nombre", user.nombre)
             put("correo", user.correo)
-            put("contraseña", user.contraseña)
+            put("contrasena", user.contrasena)
             put("ubicacion", user.ubicacion)
         }
 
@@ -243,7 +243,7 @@ class DatabaseHelper(context: Context) :
                     id = cursor.getInt(cursor.getColumnIndexOrThrow("id")),
                     nombre = cursor.getString(cursor.getColumnIndexOrThrow("nombre")),
                     correo = cursor.getString(cursor.getColumnIndexOrThrow("correo")),
-                    contraseña = cursor.getString(cursor.getColumnIndexOrThrow("contraseña")),
+                    contrasena = cursor.getString(cursor.getColumnIndexOrThrow("contraseña")),
                     ubicacion = cursor.getString(cursor.getColumnIndexOrThrow("ubicacion"))
                 )
             }

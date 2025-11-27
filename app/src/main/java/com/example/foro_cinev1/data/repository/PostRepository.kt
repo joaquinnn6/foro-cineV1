@@ -1,47 +1,74 @@
 package com.example.foro_cinev1.data.repository
 
-import android.content.Context
-import com.example.foro_cinev1.data.database.DatabaseHelper
+import com.example.foro_cinev1.data.remote.ApiClient
+import com.example.foro_cinev1.data.remote.api.CreatePostRequest
 import com.example.foro_cinev1.domain.models.Post
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-/**
- * Repositorio que actúa como capa intermedia entre la base de datos (SQLite)
- * y el ViewModel, aislando el acceso directo a DatabaseHelper.
- */
-class PostRepository(context: Context) {
+class PostRepository {
 
-    private val dbHelper = DatabaseHelper(context)
+    private val api = ApiClient.postApi
 
-    // === POSTS ===
-    fun obtenerPosts(): List<Post> {
-        return dbHelper.getAllPosts()
+    suspend fun getPosts(): List<Post> = withContext(Dispatchers.IO) {
+        try {
+            val response = api.getPosts()
+            if (response.isSuccessful) {
+                response.body() ?: emptyList()
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
     }
 
-    fun agregarPost(post: Post) {
-        dbHelper.insertPost(post)
+    suspend fun createPost(post: Post): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val request = CreatePostRequest(
+                titulo = post.titulo,
+                contenido = post.contenido,
+                autor = post.autor,
+                userId = post.userId,   // 👈 AHORA SÍ LO MANDAMOS
+                fecha = post.fecha
+            )
+            val response = api.createPost(request)
+            response.isSuccessful
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 
-    fun eliminarPost(id: Int) {
-        dbHelper.deletePost(id)
+    suspend fun deletePost(id: Int, userId: Int): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val response = api.deletePost(id.toLong(), userId.toLong())
+            response.isSuccessful
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 
-    /**
-     * 🔥 Sistema de votación (like/dislike)
-     * @param userId ID del usuario (obtenido del SessionManager)
-     * @param postId ID de la publicación
-     * @param esLike true para like, false para dislike
-     */
-    fun votarPost(userId: Int, postId: Int, esLike: Boolean): Boolean {
-        val voto = if (esLike) 1 else -1
-        return dbHelper.votarPost(userId, postId, voto)
-    }
+    suspend fun votePost(postId: Int, userId: Int, like: Boolean): Post? =
+        withContext(Dispatchers.IO) {
+            try {
+                val vote = if (like) 1 else -1
+                val response = api.votePost(
+                    postId = postId.toLong(),
+                    userId = userId.toLong(),
+                    vote = vote
+                )
 
-    // === COMENTARIOS ===
-    fun agregarComentario(postId: Int, autor: String, contenido: String, fecha: String) {
-        dbHelper.insertComment(postId, autor, contenido, fecha)
-    }
-
-    fun obtenerComentarios(postId: Int): List<Map<String, String>> {
-        return dbHelper.getCommentsByPost(postId)
-    }
+                if (response.isSuccessful) {
+                    response.body()
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
 }

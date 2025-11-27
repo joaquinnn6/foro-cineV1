@@ -5,7 +5,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,8 +22,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.example.foro_cinev1.data.database.DatabaseHelper
 import com.example.foro_cinev1.data.datastore.SessionManager
+import com.example.foro_cinev1.viewmodel.AuthViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,8 +33,9 @@ fun LoginScreen(
     alLoguearseExitoso: () -> Unit
 ) {
     val contexto = LocalContext.current
-    val dbHelper = remember { DatabaseHelper(contexto) }
     val sessionManager = remember { SessionManager(contexto) }
+    val authViewModel = remember { AuthViewModel() }
+    val scope = rememberCoroutineScope()
 
     var correo by remember { mutableStateOf("") }
     var contraseña by remember { mutableStateOf("") }
@@ -64,14 +70,30 @@ fun LoginScreen(
         if (errorCorreo == null && errorContraseña == null) {
             estaCargando = true
 
-            val usuario = dbHelper.loginUser(correo, contraseña)
-            if (usuario != null) {
-                sessionManager.guardarSesion(usuario.id, usuario.nombre, usuario.correo)
-                alLoguearseExitoso()
-            } else {
-                mensajeErrorGlobal = "Correo o contraseña incorrectos"
+            authViewModel.iniciarSesion(correo, contraseña) { user ->
+                scope.launch {
+                    if (user != null) {
+                        // ✅ Guardamos también el rol que viene del backend
+                        sessionManager.guardarSesion(
+                            id = user.id,
+                            nombre = user.nombre,
+                            correo = user.correo,
+                            rol = user.role
+                        )
+
+                        // ✅ Guardar foto de perfil si viene
+                        user.profileImageUrl
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { sessionManager.guardarFotoPerfil(it) }
+
+                        alLoguearseExitoso()
+                    } else {
+                        mensajeErrorGlobal =
+                            "Correo o contraseña incorrectos o error de conexión."
+                    }
+                    estaCargando = false
+                }
             }
-            estaCargando = false
         }
     }
 
@@ -86,7 +108,6 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo
             Icon(
                 imageVector = Icons.Default.Movie,
                 contentDescription = null,
@@ -110,7 +131,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Correo
             OutlinedTextField(
                 value = correo,
                 onValueChange = {
@@ -138,7 +158,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Contraseña
             OutlinedTextField(
                 value = contraseña,
                 onValueChange = {
@@ -182,7 +201,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Botón de login
             Button(
                 onClick = { manejarLogin() },
                 modifier = Modifier
@@ -200,7 +218,6 @@ fun LoginScreen(
                 }
             }
 
-            // Mensaje global de error
             AnimatedVisibility(visible = mensajeErrorGlobal != null) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
@@ -211,7 +228,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Enlace a registro
             TextButton(onClick = alIrARegistro) {
                 Text("¿No tienes cuenta? Regístrate")
             }

@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import coil.compose.rememberAsyncImagePainter
 import com.example.foro_cinev1.data.datastore.SessionManager
+import com.example.foro_cinev1.data.repository.UserRepository
 import com.example.foro_cinev1.utils.LocationHelper
 import kotlinx.coroutines.launch
 
@@ -33,6 +34,9 @@ fun ProfileScreen(
     val contexto = LocalContext.current
     val sessionManager = remember { SessionManager(contexto) }
     val locationHelper = remember { LocationHelper(contexto) }
+    val userRepository = remember { UserRepository() }
+
+    val userId = sessionManager.obtenerId() ?: -1
 
     var nombre by remember { mutableStateOf(sessionManager.obtenerNombre() ?: "Usuario") }
     var correo by remember { mutableStateOf(sessionManager.obtenerCorreo() ?: "correo@ejemplo.com") }
@@ -45,7 +49,10 @@ fun ProfileScreen(
     val estadoScroll = rememberScrollState()
     val scope = rememberCoroutineScope()
 
-    // ✅ Solicitud de ambos permisos (preciso y aproximado)
+    val snackbarHostState = remember { SnackbarHostState() }
+    var guardando by remember { mutableStateOf(false) }
+
+    // ✅ Permisos de ubicación
     val launcherPermisoUbicacion = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permisos ->
@@ -64,7 +71,7 @@ fun ProfileScreen(
         }
     }
 
-    // 🔄 Lanza la solicitud de permisos al cargar la pantalla
+    // 🔄 Pedir permisos al entrar
     LaunchedEffect(Unit) {
         launcherPermisoUbicacion.launch(
             arrayOf(
@@ -80,13 +87,81 @@ fun ProfileScreen(
     ) { uri: Uri? ->
         uri?.let {
             fotoUri = it
+        }
+    }
+
+    // 👉 Función para guardar cambios (backend + SessionManager)
+    fun guardarCambios() {
+        if (userId <= 0) {
             scope.launch {
-                sessionManager.guardarFotoPerfil(it.toString())
+                snackbarHostState.showSnackbar("No se pudo identificar al usuario.")
+            }
+            return
+        }
+
+        scope.launch {
+            guardando = true
+            try {
+                val fotoString = fotoUri?.toString()
+
+                // No mandamos ubicaciones "fake"
+                val ubicacionLimpia =
+                    if (ubicacion.isBlank() ||
+                        ubicacion == "Cargando ubicación…" ||
+                        ubicacion == "Permiso denegado"
+                    ) null
+                    else ubicacion
+
+                // Si no hay nada que cambiar, avisamos
+                if (
+                    (nombre == (sessionManager.obtenerNombre() ?: "Usuario")) &&
+                    (ubicacionLimpia == null) &&
+                    (fotoString == sessionManager.obtenerFotoPerfil())
+                ) {
+                    snackbarHostState.showSnackbar("No hay cambios para guardar")
+                    guardando = false
+                    return@launch
+                }
+
+                val actualizado = userRepository.updateUserProfile(
+                    id = userId.toLong(),
+                    nombre = nombre,
+                    ubicacion = ubicacionLimpia,
+                    profileImageUrl = fotoString
+                )
+
+                if (actualizado != null) {
+                    // 👇 Recuperamos el rol actual o usamos el que venga del backend
+                    val rolActual = sessionManager.obtenerRol() ?: actualizado.role
+
+                    sessionManager.guardarSesion(
+                        id = actualizado.id,
+                        nombre = actualizado.nombre,
+                        correo = actualizado.correo,
+                        rol = rolActual
+                    )
+
+                    sessionManager.guardarFotoPerfil(
+                        actualizado.profileImageUrl ?: fotoString.orEmpty()
+                    )
+
+                    snackbarHostState.showSnackbar("Perfil actualizado correctamente")
+                    modoEdicion = false
+                } else {
+                    snackbarHostState.showSnackbar("No se pudo actualizar el perfil")
+                }
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                snackbarHostState.showSnackbar("Error al actualizar el perfil")
+            } finally {
+                guardando = false
             }
         }
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Mi Perfil") },
@@ -97,8 +172,18 @@ fun ProfileScreen(
                 },
                 actions = {
                     if (modoEdicion) {
-                        TextButton(onClick = { modoEdicion = false }) {
-                            Text("Guardar", fontWeight = FontWeight.Bold)
+                        TextButton(
+                            onClick = { if (!guardando) guardarCambios() },
+                            enabled = !guardando
+                        ) {
+                            if (guardando) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("Guardar", fontWeight = FontWeight.Bold)
+                            }
                         }
                     } else {
                         IconButton(onClick = { modoEdicion = true }) {
@@ -198,7 +283,6 @@ fun ProfileScreen(
                 TarjetaEstadistica("12", "Publicaciones", Icons.Default.Forum)
                 TarjetaEstadistica("45", "Comentarios", Icons.Default.Comment)
 
-                // 🚪 Botón cerrar sesión
                 OutlinedButton(
                     onClick = { mostrarDialogoCerrarSesion = true },
                     modifier = Modifier.fillMaxWidth(),
@@ -214,7 +298,6 @@ fun ProfileScreen(
         }
     }
 
-    // 🪟 Diálogo de confirmación para cerrar sesión
     if (mostrarDialogoCerrarSesion) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoCerrarSesion = false },

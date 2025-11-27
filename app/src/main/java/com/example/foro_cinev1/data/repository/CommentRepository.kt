@@ -1,52 +1,58 @@
 package com.example.foro_cinev1.data.repository
 
-import android.content.ContentValues
-import android.content.Context
-import com.example.foro_cinev1.data.database.DatabaseHelper
+import com.example.foro_cinev1.data.remote.ApiClient
+import com.example.foro_cinev1.data.remote.api.CreateCommentRequest
 import com.example.foro_cinev1.domain.models.Comment
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.*
 
-class CommentRepository(context: Context) {
-    private val dbHelper = DatabaseHelper(context)
+class CommentRepository {
 
-    fun agregarComentario(comment: Comment): Long {
-        val db = dbHelper.writableDatabase
-        val values = ContentValues().apply {
-            put("post_id", comment.postId)
-            put("autor", comment.autor)
-            put("contenido", comment.contenido)
-            put("fecha", comment.fecha)
-        }
-        val id = db.insert("comments", null, values)
-        db.close()
-        return id
-    }
+    private val api = ApiClient.commentApi
 
-    fun obtenerComentarios(postId: Int): List<Comment> {
-        val db = dbHelper.readableDatabase
-        val cursor = db.rawQuery("SELECT * FROM comments WHERE post_id = ? ORDER BY id DESC", arrayOf(postId.toString()))
-        val comentarios = mutableListOf<Comment>()
-        with(cursor) {
-            while (moveToNext()) {
-                comentarios.add(
-                    Comment(
-                        id = getInt(getColumnIndexOrThrow("id")),
-                        postId = getInt(getColumnIndexOrThrow("post_id")),
-                        autor = getString(getColumnIndexOrThrow("autor")),
-                        contenido = getString(getColumnIndexOrThrow("contenido")),
-                        fecha = getString(getColumnIndexOrThrow("fecha"))
-                    )
-                )
+    suspend fun obtenerComentarios(postId: Int): List<Comment> = withContext(Dispatchers.IO) {
+        try {
+            val response = api.getCommentsByPost(postId.toLong())
+            if (response.isSuccessful) {
+                response.body() ?: emptyList()
+            } else {
+                emptyList()
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
         }
-        cursor.close()
-        db.close()
-        return comentarios
     }
 
-    fun eliminarComentario(id: Int): Int {
-        val db = dbHelper.writableDatabase
-        val filas = db.delete("comments", "id = ?", arrayOf(id.toString()))
-        db.close()
-        return filas
+    suspend fun agregarComentario(comment: Comment): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val fechaFinal = comment.fecha.ifBlank {
+                SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+            }
+
+            val request = CreateCommentRequest(
+                autor = comment.autor,
+                contenido = comment.contenido,
+                fecha = fechaFinal
+            )
+
+            val response = api.addComment(comment.postId.toLong(), request)
+            response.isSuccessful
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun eliminarComentario(id: Int): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val response = api.deleteComment(id.toLong())
+            response.isSuccessful
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 }

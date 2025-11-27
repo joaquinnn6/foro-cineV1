@@ -5,8 +5,8 @@ data class Post(
     val titulo: String,
     val contenido: String,
     val autor: String,
+    val userId: Int = 0,   // 👈 NUEVO: id real del creador
     val fecha: String,
     val likes: Int = 0,
-    val dislikes: Int = 0,
-    var userVote: Int = 0
+    val dislikes: Int = 0
 )

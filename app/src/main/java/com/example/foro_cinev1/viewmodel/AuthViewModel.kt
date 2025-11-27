@@ -1,19 +1,14 @@
 package com.example.foro_cinev1.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.foro_cinev1.data.repository.UserRepository
 import com.example.foro_cinev1.domain.models.User
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class AuthViewModel(context: Context) : ViewModel() {
-    private val repository = UserRepository(context)
+class AuthViewModel : ViewModel() {
 
-    private val _usuarioActual = MutableStateFlow<User?>(null)
-    val usuarioActual: StateFlow<User?> = _usuarioActual
+    private val repository = UserRepository()
 
     fun registrarUsuario(user: User, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
@@ -22,10 +17,9 @@ class AuthViewModel(context: Context) : ViewModel() {
         }
     }
 
-    fun iniciarSesion(correo: String, contraseña: String, onResult: (User?) -> Unit) {
+    fun iniciarSesion(correo: String, contrasena: String, onResult: (User?) -> Unit) {
         viewModelScope.launch {
-            val user = repository.loginUser(correo, contraseña)
-            _usuarioActual.value = user
+            val user = repository.loginUser(correo, contrasena)
             onResult(user)
         }
     }

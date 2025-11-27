@@ -4,6 +4,8 @@ data class User(
     val id: Int = 0,
     val nombre: String,
     val correo: String,
-    val contraseña: String,
-    val ubicacion: String? = null
+    val contrasena: String,
+    val role: String = "USER",             // 👈 NUEVO: rol del backend ("USER", "ADMIN")
+    val ubicacion: String? = null,
+    val profileImageUrl: String? = null
 )

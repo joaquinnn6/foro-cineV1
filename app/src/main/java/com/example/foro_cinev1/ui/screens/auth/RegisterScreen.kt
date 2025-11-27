@@ -20,9 +20,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.example.foro_cinev1.data.database.DatabaseHelper
 import com.example.foro_cinev1.data.datastore.SessionManager
 import com.example.foro_cinev1.domain.models.User
+import com.example.foro_cinev1.viewmodel.AuthViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,23 +32,23 @@ fun RegisterScreen(
     alRegistrarseExitoso: () -> Unit
 ) {
     val contexto = LocalContext.current
-    val dbHelper = remember { DatabaseHelper(contexto) }
     val sessionManager = remember { SessionManager(contexto) }
-    val coroutineScope = rememberCoroutineScope()
+    val authViewModel = remember { AuthViewModel() }
+    val scope = rememberCoroutineScope()
 
     var nombre by remember { mutableStateOf("") }
     var correo by remember { mutableStateOf("") }
-    var contraseña by remember { mutableStateOf("") }
-    var confirmarContraseña by remember { mutableStateOf("") }
+    var contrasena by remember { mutableStateOf("") }
+    var confirmarContrasena by remember { mutableStateOf("") }
     var ubicacion by remember { mutableStateOf("") }
 
-    var contraseñaVisible by remember { mutableStateOf(false) }
-    var confirmarContraseñaVisible by remember { mutableStateOf(false) }
+    var contrasenaVisible by remember { mutableStateOf(false) }
+    var confirmarContrasenaVisible by remember { mutableStateOf(false) }
 
     var errorNombre by remember { mutableStateOf<String?>(null) }
     var errorCorreo by remember { mutableStateOf<String?>(null) }
-    var errorContraseña by remember { mutableStateOf<String?>(null) }
-    var errorConfirmarContraseña by remember { mutableStateOf<String?>(null) }
+    var errorContrasena by remember { mutableStateOf<String?>(null) }
+    var errorConfirmarContrasena by remember { mutableStateOf<String?>(null) }
 
     var mensajeErrorGlobal by remember { mutableStateOf<String?>(null) }
     var estaCargando by remember { mutableStateOf(false) }
@@ -56,7 +56,6 @@ fun RegisterScreen(
     val administradorFoco = LocalFocusManager.current
     val estadoScroll = rememberScrollState()
 
-    // Funciones de validación
     fun validarNombre(nombre: String): String? = when {
         nombre.isBlank() -> "El nombre es requerido"
         nombre.length < 3 -> "Debe tener al menos 3 caracteres"
@@ -70,53 +69,72 @@ fun RegisterScreen(
         else -> null
     }
 
-    fun validarContraseña(contraseña: String): String? = when {
-        contraseña.isBlank() -> "La contraseña es requerida"
-        contraseña.length < 8 -> "Debe tener al menos 8 caracteres"
-        !contraseña.any { it.isDigit() } -> "Debe contener al menos un número"
-        !contraseña.any { it.isLowerCase() } -> "Debe contener al menos una minúscula"
-        !contraseña.any { it.isUpperCase() } -> "Debe contener al menos una mayúscula"
+    fun validarContrasena(contrasena: String): String? = when {
+        contrasena.isBlank() -> "La contraseña es requerida"
+        contrasena.length < 8 -> "Debe tener al menos 8 caracteres"
+        !contrasena.any { it.isDigit() } -> "Debe contener al menos un número"
+        !contrasena.any { it.isLowerCase() } -> "Debe contener al menos una minúscula"
+        !contrasena.any { it.isUpperCase() } -> "Debe contener al menos una mayúscula"
         else -> null
     }
 
-    fun validarConfirmarContraseña(contraseña: String, confirmar: String): String? = when {
+    fun validarConfirmarContraseña(contrasena: String, confirmar: String): String? = when {
         confirmar.isBlank() -> "Confirma tu contraseña"
-        contraseña != confirmar -> "Las contraseñas no coinciden"
+        contrasena != confirmar -> "Las contraseñas no coinciden"
         else -> null
     }
 
     fun manejarRegistro() {
         errorNombre = validarNombre(nombre)
         errorCorreo = validarCorreo(correo)
-        errorContraseña = validarContraseña(contraseña)
-        errorConfirmarContraseña = validarConfirmarContraseña(contraseña, confirmarContraseña)
+        errorContrasena = validarContrasena(contrasena)
+        errorConfirmarContrasena = validarConfirmarContraseña(contrasena, confirmarContrasena)
 
         if (errorNombre == null && errorCorreo == null &&
-            errorContraseña == null && errorConfirmarContraseña == null
+            errorContrasena == null && errorConfirmarContrasena == null
         ) {
             estaCargando = true
             mensajeErrorGlobal = null
 
-            coroutineScope.launch {
-                val nuevoUsuario = User(
-                    id = 0,
-                    nombre = nombre,
-                    correo = correo,
-                    contraseña = contraseña,
-                    ubicacion = ubicacion
-                )
+            val nuevoUsuario = User(
+                id = 0,
+                nombre = nombre,
+                correo = correo,
+                contrasena = contrasena,
+                ubicacion = ubicacion,
+                profileImageUrl = null
+                // role se va con el valor por defecto "USER" del data class
+            )
 
-                val exito = dbHelper.addUser(nuevoUsuario)
+            authViewModel.registrarUsuario(nuevoUsuario) { exito ->
                 if (exito) {
-                    val usuario = dbHelper.loginUser(correo, contraseña)
-                    usuario?.let {
-                        sessionManager.guardarSesion(it.id, it.nombre, it.correo)
+                    // Login automático
+                    authViewModel.iniciarSesion(correo, contrasena) { user ->
+                        scope.launch {
+                            if (user != null) {
+                                // ✅ Guardamos también el rol
+                                sessionManager.guardarSesion(
+                                    id = user.id,
+                                    nombre = user.nombre,
+                                    correo = user.correo,
+                                    rol = user.role
+                                )
+
+                                user.profileImageUrl
+                                    ?.takeIf { it.isNotBlank() }
+                                    ?.let { sessionManager.guardarFotoPerfil(it) }
+
+                                alRegistrarseExitoso()
+                            } else {
+                                mensajeErrorGlobal = "Registrado, pero falló al iniciar sesión."
+                            }
+                            estaCargando = false
+                        }
                     }
-                    alRegistrarseExitoso()
                 } else {
-                    mensajeErrorGlobal = "El correo ya está registrado"
+                    mensajeErrorGlobal = "El correo ya está registrado o hubo un error de red."
+                    estaCargando = false
                 }
-                estaCargando = false
             }
         }
     }
@@ -161,7 +179,6 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- Campo Nombre ---
             OutlinedTextField(
                 value = nombre,
                 onValueChange = { nombre = it; errorNombre = null },
@@ -186,7 +203,6 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- Campo Correo ---
             OutlinedTextField(
                 value = correo,
                 onValueChange = { correo = it; errorCorreo = null },
@@ -211,7 +227,6 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- Campo Ubicación (opcional) ---
             OutlinedTextField(
                 value = ubicacion,
                 onValueChange = { ubicacion = it },
@@ -230,26 +245,25 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- Contraseña ---
             OutlinedTextField(
-                value = contraseña,
-                onValueChange = { contraseña = it; errorContraseña = null },
+                value = contrasena,
+                onValueChange = { contrasena = it; errorContrasena = null },
                 label = { Text("Contraseña") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 trailingIcon = {
-                    IconButton(onClick = { contraseñaVisible = !contraseñaVisible }) {
+                    IconButton(onClick = { contrasenaVisible = !contrasenaVisible }) {
                         Icon(
-                            imageVector = if (contraseñaVisible) Icons.Default.Visibility
+                            imageVector = if (contrasenaVisible) Icons.Default.Visibility
                             else Icons.Default.VisibilityOff,
                             contentDescription = "Mostrar/Ocultar"
                         )
                     }
                 },
-                visualTransformation = if (contraseñaVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                isError = errorContraseña != null,
+                visualTransformation = if (contrasenaVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                isError = errorContrasena != null,
                 supportingText = {
-                    AnimatedVisibility(visible = errorContraseña != null) {
-                        Text(errorContraseña ?: "")
+                    AnimatedVisibility(visible = errorContrasena != null) {
+                        Text(errorContrasena ?: "")
                     }
                 },
                 keyboardOptions = KeyboardOptions(
@@ -265,26 +279,25 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- Confirmar Contraseña ---
             OutlinedTextField(
-                value = confirmarContraseña,
-                onValueChange = { confirmarContraseña = it; errorConfirmarContraseña = null },
+                value = confirmarContrasena,
+                onValueChange = { confirmarContrasena = it; errorConfirmarContrasena = null },
                 label = { Text("Confirmar contraseña") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 trailingIcon = {
-                    IconButton(onClick = { confirmarContraseñaVisible = !confirmarContraseñaVisible }) {
+                    IconButton(onClick = { confirmarContrasenaVisible = !confirmarContrasenaVisible }) {
                         Icon(
-                            imageVector = if (confirmarContraseñaVisible) Icons.Default.Visibility
+                            imageVector = if (confirmarContrasenaVisible) Icons.Default.Visibility
                             else Icons.Default.VisibilityOff,
                             contentDescription = "Mostrar/Ocultar"
                         )
                     }
                 },
-                visualTransformation = if (confirmarContraseñaVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                isError = errorConfirmarContraseña != null,
+                visualTransformation = if (confirmarContrasenaVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                isError = errorConfirmarContrasena != null,
                 supportingText = {
-                    AnimatedVisibility(visible = errorConfirmarContraseña != null) {
-                        Text(errorConfirmarContraseña ?: "")
+                    AnimatedVisibility(visible = errorConfirmarContrasena != null) {
+                        Text(errorConfirmarContrasena ?: "")
                     }
                 },
                 keyboardOptions = KeyboardOptions(
@@ -298,7 +311,6 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- Botón de registro ---
             Button(
                 onClick = { manejarRegistro() },
                 modifier = Modifier
@@ -316,7 +328,6 @@ fun RegisterScreen(
                 }
             }
 
-            // Mensaje global de error
             AnimatedVisibility(visible = mensajeErrorGlobal != null) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(

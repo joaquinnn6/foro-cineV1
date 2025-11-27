@@ -17,17 +17,20 @@ class SessionManager(private val contexto: Context) {
         private val ID_USUARIO = intPreferencesKey("id_usuario")
         private val NOMBRE_USUARIO = stringPreferencesKey("nombre_usuario")
         private val CORREO_USUARIO = stringPreferencesKey("correo_usuario")
+        private val ROL_USUARIO = stringPreferencesKey("rol_usuario")      // 👈 NUEVO
+        private val FOTO_PERFIL = stringPreferencesKey("fotoPerfil")       // opcional, lo reutilizamos abajo
     }
 
     /**
-     * Guarda los datos del usuario logueado (id, nombre, correo)
+     * Guarda los datos del usuario logueado (id, nombre, correo, rol)
      */
-    fun guardarSesion(id: Int, nombre: String, correo: String) {
+    fun guardarSesion(id: Int, nombre: String, correo: String, rol: String) {
         runBlocking {
             contexto.dataStore.edit { preferencias ->
                 preferencias[ID_USUARIO] = id
                 preferencias[NOMBRE_USUARIO] = nombre
                 preferencias[CORREO_USUARIO] = correo
+                preferencias[ROL_USUARIO] = rol             // 👈 GUARDAMOS ROL
             }
         }
     }
@@ -57,6 +60,14 @@ class SessionManager(private val contexto: Context) {
     }
 
     /**
+     * Obtiene el rol del usuario logueado (USER / ADMIN)
+     */
+    fun obtenerRol(): String? = runBlocking {
+        val prefs = contexto.dataStore.data.first()
+        prefs[ROL_USUARIO]                                   // 👈 AQUÍ LO LEEMOS
+    }
+
+    /**
      * Elimina la sesión guardada
      */
     fun cerrarSesion() {
@@ -75,14 +86,20 @@ class SessionManager(private val contexto: Context) {
         prefs[NOMBRE_USUARIO] != null && prefs[CORREO_USUARIO] != null
     }
 
+    /**
+     * Guarda la URI de la foto de perfil
+     */
     suspend fun guardarFotoPerfil(uri: String) {
         contexto.dataStore.edit { preferencias ->
-            preferencias[stringPreferencesKey("fotoPerfil")] = uri
+            preferencias[FOTO_PERFIL] = uri
         }
     }
 
+    /**
+     * Obtiene la URI de la foto de perfil
+     */
     fun obtenerFotoPerfil(): String? {
         val prefs = runBlocking { contexto.dataStore.data.first() }
-        return prefs[stringPreferencesKey("fotoPerfil")]
+        return prefs[FOTO_PERFIL]
     }
 }

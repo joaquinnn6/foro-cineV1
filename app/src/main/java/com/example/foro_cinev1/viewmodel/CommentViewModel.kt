@@ -1,6 +1,5 @@
 package com.example.foro_cinev1.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.foro_cinev1.data.repository.CommentRepository
@@ -9,8 +8,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class CommentViewModel(context: Context) : ViewModel() {
-    private val repository = CommentRepository(context)
+class CommentViewModel : ViewModel() {
+
+    private val repository = CommentRepository()
 
     private val _comentarios = MutableStateFlow<List<Comment>>(emptyList())
     val comentarios: StateFlow<List<Comment>> = _comentarios
@@ -23,15 +23,19 @@ class CommentViewModel(context: Context) : ViewModel() {
 
     fun agregarComentario(comment: Comment) {
         viewModelScope.launch {
-            repository.agregarComentario(comment)
-            cargarComentarios(comment.postId)
+            val exito = repository.agregarComentario(comment)
+            if (exito) {
+                cargarComentarios(comment.postId)
+            }
         }
     }
 
     fun eliminarComentario(id: Int, postId: Int) {
         viewModelScope.launch {
-            repository.eliminarComentario(id)
-            cargarComentarios(postId)
+            val exito = repository.eliminarComentario(id)
+            if (exito) {
+                cargarComentarios(postId)
+            }
         }
     }
 }

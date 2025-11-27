@@ -8,18 +8,33 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.foro_cinev1.data.datastore.SessionManager
 import com.example.foro_cinev1.domain.models.Comment
 import com.example.foro_cinev1.domain.models.Post
 import com.example.foro_cinev1.viewmodel.CommentViewModel
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,9 +42,11 @@ fun PostDetailScreen(
     post: Post,
     onBack: () -> Unit
 ) {
-    val context = LocalContext.current
-    val viewModel = remember { CommentViewModel(context) }
+    val contexto = LocalContext.current
+    val sessionManager = remember { SessionManager(contexto) }
 
+    // ✅ ViewModel que ahora usa el backend (CommentRepository + Retrofit)
+    val viewModel: CommentViewModel = viewModel()
     val comentarios by viewModel.comentarios.collectAsState()
 
     // Cargar comentarios al iniciar
@@ -39,6 +56,11 @@ fun PostDetailScreen(
 
     var nuevoComentario by remember { mutableStateOf("") }
     var autor by remember { mutableStateOf("") }
+
+    // Prefill autor con el nombre del usuario logueado
+    LaunchedEffect(Unit) {
+        autor = sessionManager.obtenerNombre() ?: ""
+    }
 
     Scaffold(
         topBar = {
@@ -144,7 +166,11 @@ fun PostDetailScreen(
                 Button(
                     onClick = {
                         if (nuevoComentario.isNotBlank() && autor.isNotBlank()) {
-                            val fecha = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+                            val fecha = SimpleDateFormat(
+                                "dd/MM/yyyy",
+                                Locale.getDefault()
+                            ).format(Date())
+
                             val nuevo = Comment(
                                 postId = post.id,
                                 autor = autor,

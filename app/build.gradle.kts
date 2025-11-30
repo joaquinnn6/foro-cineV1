@@ -82,6 +82,9 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("com.google.code.gson:gson:2.10.1")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.mockito:mockito-core:5.2.0")
+    testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.0")
 
     // Testing
     testImplementation(libs.junit)
@@ -110,5 +113,6 @@ dependencies {
 
 // Logging (opcional pero MUY útil)
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation(kotlin("test"))
 
 }

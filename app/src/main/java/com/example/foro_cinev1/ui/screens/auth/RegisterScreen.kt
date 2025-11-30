@@ -29,11 +29,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun RegisterScreen(
     alVolverAtras: () -> Unit,
-    alRegistrarseExitoso: () -> Unit
+    alRegistrarseExitoso: () -> Unit,
+    // Inyección de dependencias para tests
+    viewModel: AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    sessionManager: SessionManager = SessionManager(LocalContext.current)
 ) {
-    val contexto = LocalContext.current
-    val sessionManager = remember { SessionManager(contexto) }
-    val authViewModel = remember { AuthViewModel() }
     val scope = rememberCoroutineScope()
 
     var nombre by remember { mutableStateOf("") }
@@ -106,10 +106,10 @@ fun RegisterScreen(
                 // role se va con el valor por defecto "USER" del data class
             )
 
-            authViewModel.registrarUsuario(nuevoUsuario) { exito ->
+            viewModel.registrarUsuario(nuevoUsuario) { exito ->
                 if (exito) {
                     // Login automático
-                    authViewModel.iniciarSesion(correo, contrasena) { user ->
+                    viewModel.iniciarSesion(correo, contrasena) { user ->
                         scope.launch {
                             if (user != null) {
                                 // ✅ Guardamos también el rol

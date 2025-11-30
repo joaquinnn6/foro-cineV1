@@ -2,13 +2,14 @@ package com.example.foro_cinev1.data.repository
 
 import com.example.foro_cinev1.data.remote.ApiClient
 import com.example.foro_cinev1.data.remote.api.CreatePostRequest
+import com.example.foro_cinev1.data.remote.api.PostApi
 import com.example.foro_cinev1.domain.models.Post
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class PostRepository {
-
-    private val api = ApiClient.postApi
+class PostRepository(
+    private val api: PostApi = ApiClient.postApi
+) {
 
     suspend fun getPosts(): List<Post> = withContext(Dispatchers.IO) {
         try {
@@ -30,7 +31,7 @@ class PostRepository {
                 titulo = post.titulo,
                 contenido = post.contenido,
                 autor = post.autor,
-                userId = post.userId,   // 👈 AHORA SÍ LO MANDAMOS
+                userId = post.userId,
                 fecha = post.fecha
             )
             val response = api.createPost(request)

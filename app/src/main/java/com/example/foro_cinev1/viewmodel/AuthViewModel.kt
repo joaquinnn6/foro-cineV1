@@ -6,9 +6,9 @@ import com.example.foro_cinev1.data.repository.UserRepository
 import com.example.foro_cinev1.domain.models.User
 import kotlinx.coroutines.launch
 
-class AuthViewModel : ViewModel() {
-
-    private val repository = UserRepository()
+class AuthViewModel(
+    private val repository: UserRepository = UserRepository()
+) : ViewModel() {
 
     fun registrarUsuario(user: User, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {

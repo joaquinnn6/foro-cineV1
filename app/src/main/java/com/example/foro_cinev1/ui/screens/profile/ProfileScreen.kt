@@ -29,13 +29,12 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProfileScreen(
     alVolverAtras: () -> Unit,
-    alCerrarSesion: () -> Unit
+    alCerrarSesion: () -> Unit,
+    // Inyección de dependencias para tests
+    sessionManager: SessionManager = SessionManager(LocalContext.current),
+    locationHelper: LocationHelper = LocationHelper(LocalContext.current),
+    userRepository: UserRepository = UserRepository()
 ) {
-    val contexto = LocalContext.current
-    val sessionManager = remember { SessionManager(contexto) }
-    val locationHelper = remember { LocationHelper(contexto) }
-    val userRepository = remember { UserRepository() }
-
     val userId = sessionManager.obtenerId() ?: -1
 
     var nombre by remember { mutableStateOf(sessionManager.obtenerNombre() ?: "Usuario") }

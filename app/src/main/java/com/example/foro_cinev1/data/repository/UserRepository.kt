@@ -4,13 +4,12 @@ import com.example.foro_cinev1.data.remote.ApiClient
 import com.example.foro_cinev1.data.remote.api.LoginRequest
 import com.example.foro_cinev1.data.remote.api.RegisterRequest
 import com.example.foro_cinev1.data.remote.api.UpdateUserRequest
+import com.example.foro_cinev1.data.remote.api.UserApi
 import com.example.foro_cinev1.domain.models.User
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class UserRepository {
-
-    private val api = ApiClient.userApi
+class UserRepository(private val api: UserApi = ApiClient.userApi) {
 
     // -----------------------------------------------------------------------------------------
     // REGISTRAR USUARIO

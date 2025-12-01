@@ -15,10 +15,11 @@ import com.example.foro_cinev1.data.datastore.SessionManager
 @Composable
 fun SplashScreen(
     onSesionActiva: () -> Unit,
-    onIrLogin: () -> Unit,
-    // Inyección de dependencias
-    sessionManager: SessionManager = SessionManager(LocalContext.current)
+    onIrLogin: () -> Unit
 ) {
+    val contexto = LocalContext.current
+    val sessionManager = remember { SessionManager(contexto) }
+
     // Estado de carga
     var cargando by remember { mutableStateOf(true) }
 

@@ -68,6 +68,7 @@ dependencies {
 
     // Coil para imágenes
     implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation(libs.androidx.material3)
 
     // DataStore Preferences
     implementation("androidx.datastore:datastore-preferences:1.1.1")
@@ -76,43 +77,25 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
-    // Retrofit + Gson para API
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    //  Retrofit + Gson para API
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("com.google.code.gson:gson:2.10.1")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito:mockito-core:5.2.0")
     testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.0")
 
-    // --- TESTING ---
-    
-    // Unit Testing (Local)
+    // Testing
     testImplementation(libs.junit)
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.mockito:mockito-core:5.7.0")
-    testImplementation("org.mockito:mockito-inline:5.2.0")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-    testImplementation("androidx.arch.core:core-testing:2.2.0")
-    testImplementation("com.google.truth:truth:1.1.5")
-    testImplementation("app.cash.turbine:turbine:1.0.0")
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
-
-    // Instrumented Testing (UI / Android)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    
-    // Añadimos runner y rules explícitamente para asegurar que JUnit4 funcione
-    androidTestImplementation("androidx.test:runner:1.5.2")
-    androidTestImplementation("androidx.test:rules:1.5.0")
 
-    // Debug (Necesario para UI Tests: Manifest y Tooling)
+    // Debug
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-<<<<<<< HEAD
 
     // Compose UI Tooling
     debugImplementation("androidx.compose.ui:ui-tooling")
@@ -133,6 +116,3 @@ dependencies {
     implementation(kotlin("test"))
 
 }
-=======
-}
->>>>>>> a34892c (pruebas unitarias de repository y viewmodel)

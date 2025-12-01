@@ -8,9 +8,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class CommentViewModel(
-    private val repository: CommentRepository = CommentRepository()
-) : ViewModel() {
+class CommentViewModel : ViewModel() {
+
+    private val repository = CommentRepository()
 
     private val _comentarios = MutableStateFlow<List<Comment>>(emptyList())
     val comentarios: StateFlow<List<Comment>> = _comentarios

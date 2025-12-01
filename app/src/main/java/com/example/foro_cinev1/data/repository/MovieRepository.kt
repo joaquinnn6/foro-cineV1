@@ -1,15 +1,14 @@
 package com.example.foro_cinev1.data.repository
 
 import com.example.foro_cinev1.data.api.RetrofitClient
-import com.example.foro_cinev1.data.api.TmdbApiService
 import com.example.foro_cinev1.data.api.models.Movie
 import com.example.foro_cinev1.data.api.models.MovieDetail
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class MovieRepository(
-    private val apiService: TmdbApiService = RetrofitClient.apiService
-) {
+class MovieRepository {
+
+    private val apiService = RetrofitClient.apiService
     private val apiKey = RetrofitClient.API_KEY
 
     suspend fun getPopularMovies(): Result<List<Movie>> = withContext(Dispatchers.IO) {

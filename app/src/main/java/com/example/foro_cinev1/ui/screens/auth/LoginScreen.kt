@@ -30,11 +30,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun LoginScreen(
     alIrARegistro: () -> Unit,
-    alLoguearseExitoso: () -> Unit,
-    // Inyección de dependencias manual para permitir testing
-    viewModel: AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
-    sessionManager: SessionManager = SessionManager(LocalContext.current)
+    alLoguearseExitoso: () -> Unit
 ) {
+    val contexto = LocalContext.current
+    val sessionManager = remember { SessionManager(contexto) }
+    val authViewModel = remember { AuthViewModel() }
     val scope = rememberCoroutineScope()
 
     var correo by remember { mutableStateOf("") }
@@ -70,7 +70,7 @@ fun LoginScreen(
         if (errorCorreo == null && errorContraseña == null) {
             estaCargando = true
 
-            viewModel.iniciarSesion(correo, contraseña) { user ->
+            authViewModel.iniciarSesion(correo, contraseña) { user ->
                 scope.launch {
                     if (user != null) {
                         // ✅ Guardamos también el rol que viene del backend

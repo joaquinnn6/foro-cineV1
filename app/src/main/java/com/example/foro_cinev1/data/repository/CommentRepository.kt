@@ -1,7 +1,6 @@
 package com.example.foro_cinev1.data.repository
 
 import com.example.foro_cinev1.data.remote.ApiClient
-import com.example.foro_cinev1.data.remote.api.CommentApi
 import com.example.foro_cinev1.data.remote.api.CreateCommentRequest
 import com.example.foro_cinev1.domain.models.Comment
 import kotlinx.coroutines.Dispatchers
@@ -9,9 +8,9 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
-class CommentRepository(
-    private val api: CommentApi = ApiClient.commentApi
-) {
+class CommentRepository {
+
+    private val api = ApiClient.commentApi
 
     suspend fun obtenerComentarios(postId: Int): List<Comment> = withContext(Dispatchers.IO) {
         try {

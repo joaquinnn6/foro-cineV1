@@ -19,9 +19,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.foro_cinev1.R
 import com.example.foro_cinev1.data.api.models.Movie
-import com.example.foro_cinev1.domain.models.Post
 import com.example.foro_cinev1.viewmodel.MovieViewModel
-import com.example.foro_cinev1.viewmodel.PostViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,23 +28,12 @@ fun HomeScreen(
     alIrAForo: () -> Unit,
     alIrAPerfil: () -> Unit,
     alIrADetalleNoticia: (String) -> Unit,
-    movieViewModel: MovieViewModel = viewModel(),
-    postViewModel: PostViewModel = viewModel()
+    movieViewModel: MovieViewModel = viewModel()
 ) {
     var tabSeleccionada by remember { mutableStateOf(0) }
-
-    // Películas
     val peliculasPopulares by movieViewModel.popularMovies.collectAsState()
     val isLoading by movieViewModel.isLoading.collectAsState()
     val errorMessage by movieViewModel.errorMessage.collectAsState()
-
-    // Publicaciones del foro
-    val publicaciones by postViewModel.posts.collectAsState()
-
-    LaunchedEffect(Unit) {
-        // Cargar posts para la sección de "Publicaciones Recientes"
-        postViewModel.cargarPosts()
-    }
 
     Scaffold(
         topBar = {
@@ -127,7 +114,7 @@ fun HomeScreen(
                 }
             }
 
-            // Mensaje de error en películas
+            // Mensaje de error
             if (errorMessage != null) {
                 item {
                     Card(
@@ -143,10 +130,7 @@ fun HomeScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
                                 Text("Error al cargar películas", fontWeight = FontWeight.Bold)
-                                Text(
-                                    errorMessage ?: "Error desconocido",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+                                Text(errorMessage ?: "Error desconocido", style = MaterialTheme.typography.bodySmall)
                             }
                         }
                     }
@@ -223,59 +207,42 @@ fun HomeScreen(
                 )
             }
 
-            if (publicaciones.isEmpty()) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                Icons.Default.Forum,
-                                contentDescription = null,
-                                modifier = Modifier.size(40.dp),
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Aún no hay publicaciones.",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Ve al foro y crea la primera 🎬",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            OutlinedButton(onClick = alIrAForo) {
-                                Text("Ir al foro")
-                            }
-                        }
-                    }
-                }
-            } else {
-                // Tomar las 3 publicaciones más recientes (por id descendente)
-                val recientes = publicaciones
-                    .sortedByDescending { it.id }
-                    .take(3)
+            items(3) { indice ->
+                TarjetaPublicacionForo(
+                    titulo = "Publicación ${indice + 1}",
+                    autor = "Usuario ${indice + 1}",
+                    alHacerClick = alIrAForo
+                )
+            }
 
-                items(recientes) { post ->
-                    TarjetaPublicacionForo(
-                        post = post,
-                        alHacerClick = alIrAForo
-                    )
+            // Categorías
+            item {
+                Text(
+                    text = "🎭 Categorías Populares",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ChipCategoria("🎬 Estrenos", Modifier.weight(1f))
+                    ChipCategoria("⭐ Reseñas", Modifier.weight(1f))
                 }
             }
 
-            // 🔥 Categorías Populares ELIMINADAS a pedido del chef 😎
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ChipCategoria("🎭 Teorías", Modifier.weight(1f))
+                    ChipCategoria("🍿 Recomendaciones", Modifier.weight(1f))
+                }
+            }
         }
     }
 }
@@ -334,7 +301,8 @@ fun TarjetaPelicula(pelicula: Movie) {
 
 @Composable
 fun TarjetaPublicacionForo(
-    post: Post,
+    titulo: String,
+    autor: String,
     alHacerClick: () -> Unit
 ) {
     Card(
@@ -357,19 +325,11 @@ fun TarjetaPublicacionForo(
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
+                Text(titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(
-                    post.titulo,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "Por ${post.autor}",
+                    text = "Por $autor",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Icon(
@@ -381,15 +341,11 @@ fun TarjetaPublicacionForo(
     }
 }
 
-// Puedes dejar ChipCategoria si quieres reutilizarlo después.
-// Ahora mismo ya no se usa en HomeScreen.
 @Composable
 fun ChipCategoria(texto: String, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.height(56.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

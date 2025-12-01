@@ -1,66 +1,184 @@
-CineVerse - Aplicación de Foro de Cine 🎬
-Descripción del Proyecto
-CineVerse es una aplicación móvil Android desarrollada en Kotlin con Jetpack Compose que funciona como una red social enfocada en el cine. 
-Permite a los usuarios compartir opiniones sobre películas, comentar publicaciones, votar contenido y mantenerse informados sobre noticias cinematográficas.
+# **CineVerse – Foro y Noticias de Cine**
 
+Proyecto académico desarrollado para la asignatura de Desarrollo de Aplicaciones Móviles.  
+Incluye **aplicación Android (Jetpack Compose)** + **microservicio backend (Spring Boot)** + **pruebas unitarias** + **APK release firmado**.
 
-Estudiantes
+---
 
-Martín Céspedes
-Joaquín Contreras
+## **Integrantes del equipo**
 
-Tecnologías Utilizadas
+| Nombre completo | Rol |
+|-----------------|------|
+| **Martín Felipe Céspedes Galarce** | Backend |
+| **Joaquín Ignacio Contreras Bugueño** | Frontend |
 
-Kotlin + Jetpack Compose
-SQLite
-Arquitectura MVVM
-DataStore Preferences
-Google Play Services Location
-Coil (gestión de imágenes)
+---
 
-Funcionalidades Implementadas
-Autenticación
+# **Descripción general**
 
-Registro de usuarios con validación de campos
-Inicio de sesión con persistencia de sesión
-Splash screen con verificación automática
+**CineVerse** es una aplicación móvil para Android que permite:
 
-Foro de Discusión
+- Ver **películas populares** obtenidas desde la API de TMDB.  
+- Leer noticias y categorías destacadas de cine.  
+- Acceder a un **foro interactivo** donde los usuarios pueden:
+  - Crear publicaciones  
+  - Dar like / dislike  
+  - Comentar  
+  - Eliminar publicaciones (solo creador o admin)
+- Administrar un **perfil personal** con foto, nombre y ubicación.
+- Autenticación de usuarios (login/registro).
 
-Crear publicaciones con título y contenido
-Sistema de votación (like/dislike) por usuario con prevención de votos duplicados
-Agregar comentarios a publicaciones
-Eliminar publicaciones propias
-Vista de todas las publicaciones ordenadas por fecha
+El proyecto incluye:
 
-Noticias
+✔ Microservicio backend REST en Spring Boot en la nube (Render)
+✔ Aplicación móvil Android en Jetpack Compose  
+✔ Tests unitarios (JUnit)  
+✔ APK release firmada  
+✔ Keystore de firma  
+✔ Trabajo colaborativo GitHub
 
-Listado de noticias cinematográficas categorizadas
-Vista de detalle de cada noticia
-Búsqueda en tiempo real
-Sistema de favoritos
+---
 
-Perfil de Usuario
+# **Funcionalidades principales**
 
-Foto de perfil personalizable desde galería
-Detección automática de ubicación GPS (ciudad/región)
-Visualización de estadísticas (publicaciones, comentarios)
-Edición de información personal
-Cierre de sesión
+### Autenticación
+- Registro de usuario
+- Login
+- Persistencia de sesión (DataStore)
+- Manejo de rol: `USER` / `ADMIN`
 
-Diseño
+### Noticias y cine
+- Películas populares obtenidas desde TMDB API
+- Noticias demo en categorías (Estrenos, Reseñas, Recomendaciones)
 
-Tema oscuro personalizado
-Animaciones de transición entre pantallas
-Material Design 3
-Validación en tiempo real de formularios
+### Foro de cine
+- Crear publicaciones
+- Ver feed de posts
+- Likes / Dislikes con control por usuario
+- Comentarios por post
+- Eliminar post (solo creador o administrador)
+- Actualización en tiempo real desde backend
 
-Pasos para Ejecutar
+### Perfil de usuario
+- Actualizar nombre, ubicación y foto
+- Guardar foto de perfil en DataStore
+- Cerrar sesión
 
-Clonar el repositorio
-Abrir el proyecto en Android Studio
-Esperar sincronización de Gradle
-Conectar dispositivo Android (API 33+) o emulador con Google Play Services
-Ejecutar la aplicación
-Conceder permisos de ubicación y galería cuando se soliciten
-Registrarse como nuevo usuario para comenzar
+---
+
+# **Endpoints utilizados**
+
+## Back-end propio (Spring Boot – Puerto 10000)
+
+### **Usuarios**
+| Método | Endpoint | Descripción |
+|--------|-----------|-------------|
+| POST | `/api/users/register` | Registrar usuario |
+| POST | `/api/users/login` | Login |
+| PUT | `/api/users/{id}` | Actualizar perfil |
+| GET | `/api/users/{id}` | Obtener usuario por ID |
+
+### **Posts (foro)**
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/posts` | Listar publicaciones |
+| POST | `/api/posts` | Crear publicación |
+| POST | `/api/posts/{postId}/vote?userId=&vote=` | Votar (like/dislike) |
+| DELETE | `/api/posts/{id}?userId=` | Eliminar publicación |
+
+### **Comentarios**
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/comments/post/{postId}` | Listar comentarios de un post |
+| POST | `/api/comments` | Crear comentario |
+| DELETE | `/api/comments/{id}` | Eliminar comentario |
+
+---
+
+# **API Externa utilizada**
+
+### **TMDB API (TheMovieDatabase)**  
+
+Endpoints usados:
+- `/movie/popular`
+- `/movie/{id}`
+- `/movie/{id}/credits`
+
+---
+
+# **Instrucciones para ejecutar el proyecto**
+
+## **Backend (Spring Boot)**
+
+1. Servidor activo en:
+   ```
+   https://foro-cine-backend.onrender.com
+   ```
+2. backend ubicado en:
+   ```
+   https://github.com/Pastito247/foro-cine-backend
+   ```
+---
+
+## **Aplicación Android**
+
+1. Abrir carpeta `foro-cineV1` en Android Studio.
+2. Esperar sincronización de Gradle.
+3. Conectar un celular o abrir emulador.
+4. Ejecutar con ▶️ **Run App**.
+
+---
+
+# **APK firmado**
+
+Ubicación:
+```
+app/build/outputs/apk/release/app-release.apk
+```
+
+### 🗝 Ubicación del archivo .jks
+
+```
+https://drive.google.com/file/d/1lL26-f_f3FpUjIF3ZhQ6FYJ2hs85-R7f/view?usp=sharing
+```
+
+---
+
+# **Pruebas unitarias**
+
+Ubicación:
+```
+app/src/test/java/com/example/foro_cinev1/
+```
+
+Incluye pruebas de:
+- Modelos
+- Noticias
+- TMDB
+- Comentarios
+- Likes/Dislikes
+
+---
+
+# **Evidencia de trabajo colaborativo**
+
+En GitHub → Insights → Contributors  
+Se muestran commits de **ambos integrantes** del proyecto.
+
+---
+
+# **Código fuente incluido**
+
+- `/foro-cineV1` – Aplicación Android  
+- `/README.md` – Este archivo  
+- `/app-release.apk` – APK final  
+
+---
+
+# **Estado final del proyecto**
+
+✔ Backend completo  
+✔ App funcional  
+✔ Pruebas listas  
+✔ APK firmada  
+✔ Documentación OK 
